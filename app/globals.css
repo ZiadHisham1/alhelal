@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+@theme {
+  /* Map the CSS variable produced by next/font into Tailwind's font utility */
+  --font-lalezar: var(--font-lalezar);
+
+  /* Your design tokens (optional but recommended) */
+  --color-cream-50: #FDF8EE;
+  --color-cream-100: #FBF1DC;
+  --color-cream-200: #F5E3BC;
+
+  --color-sand-400: #C9A87C;
+  --color-sand-500: #A8845A;
+  --color-sand-600: #8A6B45;
+
+  --color-ink: #171717;
+  --color-ink-soft: #2B2B2B;
+}
+
+/* Optional: safe-area, RTL tweaks */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hides scrollbars on horizontal-scroll containers */
+@utility scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
