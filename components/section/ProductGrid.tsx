@@ -1,44 +1,37 @@
 import { ProductCard } from "@/components/ui/ProductCard";
-import { Sheet } from "./Sheet";
-
-export interface Product {
-  title: string;
-  subtitle?: string;
-  brand?: string;
-  image: string;
-  href: string;
-}
+import type { Product } from "@/lib/products";
 
 interface ProductGridProps {
-  title?: string;
   products: Product[];
   emptyMessage?: string;
+  className?: string;
 }
 
 export function ProductGrid({
-  title,
   products,
   emptyMessage = "لا توجد منتجات حالياً",
+  className,
 }: ProductGridProps) {
-  return (
-    <Sheet>
-      {title && (
-        <h2 className="font-lalezar text-2xl sm:text-3xl text-ink text-center mb-8">
-          {title}
-        </h2>
-      )}
+  if (products.length === 0) {
+    return (
+      <p className="text-center text-ink/60 py-12 font-lalezar text-xl">
+        {emptyMessage}
+      </p>
+    );
+  }
 
-      {products.length === 0 ? (
-        <p className="text-center text-ink/60 py-12 font-lalezar text-xl">
-          {emptyMessage}
-        </p>
-      ) : (
-        <div className="max-w-[720px] mx-auto space-y-5">
-          {products.map((p) => (
-            <ProductCard key={p.href} {...p} />
-          ))}
-        </div>
-      )}
-    </Sheet>
+  return (
+    <div className={className ?? "space-y-5"}>
+      {products.map((p) => (
+        <ProductCard
+          key={p.id}
+          title={p.title}
+          subtitle={p.subtitle}
+          brand={p.brand}
+          image={p.image}
+          href={p.href}
+        />
+      ))}
+    </div>
   );
 }

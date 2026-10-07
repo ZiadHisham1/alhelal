@@ -1,15 +1,21 @@
 "use client";
 
+
+
+import { useCartStore } from "@/lib/cart-store";
 import { useState } from "react";
 import Link from "next/link";
 import { siteConfig } from "@/config/site";
 import { IconButton } from "@/components/ui/IconButton";
 import { cn } from "@/lib/utils";
+import { CartBadge } from "../ui/CartBadge";
 
 export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  // inside the component:
+  const openDrawer = useCartStore((s) => s.openDrawer);
   const cartCount = 3; // 🔌 later: pull from cart store/context
-
+  
   return (
     <>
       <nav
@@ -84,12 +90,14 @@ export function Navbar() {
 
         {/* RIGHT: cart + profile */}
         <div className="relative z-[2] flex items-center gap-0.5">
-          <IconButton
-            icon="cart"
-            label={siteConfig.nav.cart.label}
-            href={siteConfig.nav.cart.href}
-            badge={cartCount}
-          />
+          <div className="relative">
+            <IconButton
+              icon="cart"
+              label={siteConfig.nav.cart.label}
+              onClick={openDrawer}  
+            />
+            <CartBadge />
+          </div>
           <IconButton
             icon="profile"
             label={siteConfig.nav.profile.label}

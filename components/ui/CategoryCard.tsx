@@ -23,7 +23,7 @@ export function CategoryCard({
     <Link
       href={href}
       className={cn(
-        "group relative block w-full h-[180px] overflow-hidden",
+        "group relative block w-full h-[150px] overflow-hidden",
         "rounded-[28px]",
         "aspect-[4/3] sm:aspect-[16/10]",
         "shadow-card",

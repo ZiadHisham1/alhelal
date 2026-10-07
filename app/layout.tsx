@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { Lalezar } from "next/font/google";
 import { siteConfig } from "@/config/site";
 import "./globals.css";
+import { CartInit } from "@/components/providers/CartInit";
+import { CartDrawer } from "@/components/section/CartDrawer";
 
 const lalezar = Lalezar({
   weight: "400",
@@ -25,6 +27,8 @@ export default function RootLayout({
     <html lang="ar" dir="rtl" className={lalezar.variable}>
       <body className="min-h-screen bg-cream-50 text-ink antialiased">
         {children}
+        <CartDrawer />
+        <CartInit />
       </body>
     </html>
   );
