@@ -22,8 +22,8 @@ export async function getDefaultRegion() {
   return (
     regions.find((r) => r.currency_code === "egp") ??
     regions.find((r) =>
-      r.countries?.some((c: { iso_2: string }) => c.iso_2 === "eg")
-    ) ??
+    r.countries?.some((c) => c?.iso_2 === "eg")
+  ) ??
     regions[0]
   );
 }

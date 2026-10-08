@@ -43,6 +43,7 @@ interface CartState {
   updateQty: (lineId: string, qty: number) => Promise<void>;
   removeItem: (lineId: string) => Promise<void>;
   refresh: () => Promise<void>;
+  clear: () => Promise<void>;    
 
   // Drawer
   openDrawer: () => void;

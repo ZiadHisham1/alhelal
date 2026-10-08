@@ -104,12 +104,12 @@ export function CheckoutFlow() {
     setLoading(true);
     setError(null);
     try {
-      await addShippingMethod(cartId, selectedShipping);
+      await addShippingMethod(cartId, selectedShipping!);
 
       // Need region id → payment providers
       const cart = await getCart(cartId);
       const providers = (await getPaymentProviders(
-        cart.region_id
+        cart.region_id ? cart.region_id : ""
       )) as PaymentProvider[];
 
       if (!providers.length) {
@@ -134,7 +134,7 @@ export function CheckoutFlow() {
     setLoading(true);
     setError(null);
     try {
-      await initPaymentSession(cartId, selectedProvider);
+      await initPaymentSession(cartId, selectedProvider!);
       const result = await completeOrder(cartId);
 
       if (result.type === "order" && result.order) {
