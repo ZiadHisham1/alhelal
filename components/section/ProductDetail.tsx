@@ -135,14 +135,14 @@ export function ProductDetail({ product, related }: ProductDetailProps) {
           </div>
 
           <AddToCartButton
-            variantId={product.variants[0].id}   // ← Medusa variant
+            variantId={product.variantId ?? ""}
             productId={product.id}
             title={product.title}
             subtitle={product.subtitle}
             image={product.image}
             href={product.href}
             quantity={quantity}
-            disabled={product.inStock === false}
+            disabled={product.inStock === false || !product.variantId}
           />
 
           {/* Specs */}

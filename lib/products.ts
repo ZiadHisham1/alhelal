@@ -26,6 +26,8 @@ export interface Product {
   highlights?: string[];
   /** Optional stock — undefined = available */
   inStock?: boolean;
+  handle?: string;
+  variantId?: string;
 }
 
 export const allProducts: Product[] = [

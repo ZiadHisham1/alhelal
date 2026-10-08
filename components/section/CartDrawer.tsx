@@ -108,8 +108,10 @@ export function CartDrawer() {
                     {item.title}
                     {item.subtitle && ` ${item.subtitle}`}
                   </Link>
+
+                  {/* 👇 FIXED: unitPrice */}
                   <p className="text-sm text-ink/60 mt-1">
-                    {item.price.toLocaleString("ar-EG")} ج.م
+                    {(item.unitPrice ?? 0).toLocaleString("ar-EG")} ج.م
                   </p>
 
                   <div className="mt-2 flex items-center justify-between gap-2">

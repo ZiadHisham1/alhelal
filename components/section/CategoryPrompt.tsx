@@ -2,10 +2,10 @@ import { CategoryCard } from "@/components/ui/CategoryCard";
 import { StackedSheet } from "./Sheet";
 
 const products = [
-  { title: "كنبة", subtitle: "اتركيه", image: "/img/sofa-brown.jpg", href: "/product/brown-sofa" },
-  { title: "كنبة", subtitle: "سرير", brand: "DAKAR XL · sofa", image: "/img/sofa-gray.jpg", href: "/product/dakar-xl" },
-  { title: "lazy", subtitle: "boy", image: "/img/lazyboy.jpg", href: "/product/lazy-boy" },
-  { title: "غرف", subtitle: "نوم", image: "/img/bedroom.jpg", href: "/product/bedroom" },
+  { title: "كنبة", subtitle: "اتركيه", image: "/img/sofa-brown.jpg", href: "/collection" },
+  { title: "كنبة", subtitle: "سرير", brand: "DAKAR XL · sofa", image: "/img/sofa-gray.jpg", href: "/collection" },
+  { title: "lazy", subtitle: "boy", image: "/img/lazyboy.jpg", href: "/collection" },
+  { title: "غرف", subtitle: "نوم", image: "/img/bedroom.jpg", href: "/collection" },
 ];
 
 export function CategoryPrompt() {

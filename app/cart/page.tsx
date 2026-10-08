@@ -81,7 +81,7 @@ export default function CartPage() {
                         {item.subtitle && ` ${item.subtitle}`}
                       </Link>
                       <p className="text-sm text-ink/60 mt-1">
-                        {item.price.toLocaleString("ar-EG")} ج.م × {item.quantity}
+                        {(item.unitPrice ?? 0).toLocaleString("ar-EG")} ج.م × {item.quantity}
                       </p>
 
                       <div className="mt-3 flex items-center justify-between gap-3">
@@ -101,7 +101,7 @@ export default function CartPage() {
 
                     <div className="text-left shrink-0">
                       <p className="font-lalezar text-lg text-ink">
-                        {(item.price * item.quantity).toLocaleString("ar-EG")}
+                        {((item.unitPrice ?? 0) * item.quantity).toLocaleString("ar-EG")}
                       </p>
                       <p className="text-xs text-ink/50">ج.م</p>
                     </div>

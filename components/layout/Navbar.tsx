@@ -14,7 +14,6 @@ export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   // inside the component:
   const openDrawer = useCartStore((s) => s.openDrawer);
-  const cartCount = 3; // 🔌 later: pull from cart store/context
   
   return (
     <>
@@ -125,10 +124,9 @@ function MobileDrawer({
 }) {
   const items = [
     { label: "الرئيسية", href: "/" },
-    { label: "المتجر", href: "/shop" },
-    { label: "الأقسام", href: "/categories" },
-    { label: "من نحن", href: "/about" },
-    { label: "تواصل معنا", href: "/contact" },
+    { label: "الأقسام", href: "/collection" },
+    { label: "من نحن", href: "/about-us" },
+    { label: "تواصل معنا", href: "/contact-us" },
   ];
 
   return (

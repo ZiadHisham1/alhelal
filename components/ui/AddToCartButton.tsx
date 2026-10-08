@@ -52,10 +52,13 @@ export function AddToCartButton({
       onClick={handleClick}
       disabled={disabled || status === "loading"}
       className={cn(
-        "w-full h-14 rounded-full font-lalezar text-xl text-white transition-colors duration-300",
+        "w-full h-14 rounded-full",
+        "font-lalezar text-xl text-white",
+        "transition-colors duration-300",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30",
         "disabled:opacity-50 disabled:cursor-not-allowed",
         status === "added"
-          ? "bg-emerald-600"
+          ? "bg-emerald-600 hover:bg-emerald-700"
           : "bg-ink hover:bg-ink/90 active:scale-[0.99]"
       )}
     >
