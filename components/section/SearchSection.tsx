@@ -1,10 +1,13 @@
+// components/section/SearchSection.tsx
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sheet, StackedSheet } from "./Sheet";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { FeatureCard } from "@/components/ui/FeatureCard";
+import { InstantSearchResults } from "@/components/ui/InstantSearchResults";
+import type { Product } from "@/lib/products";
 
 const DEFAULT_FEATURE = {
   title: "اتريه رمادي فخم",
@@ -12,20 +15,50 @@ const DEFAULT_FEATURE = {
   href: "/product/luxury-gray-sofa",
 };
 
+interface SearchSectionProps {
+  title?: string;
+  feature?: { title: string; image: string; href: string };
+  ctaLabel?: string;
+  ctaHref?: string;
+  /** All products to search through — pass from server */
+  products?: Product[];
+}
+
 export function SearchSection({
   title = "اعمل سيرش علي اي منتج",
   feature = DEFAULT_FEATURE,
   ctaLabel = "ابحث عن المزيد",
   ctaHref = "/search",
-}: {
-  title?: string;
-  feature?: { title: string; image: string; href: string };
-  ctaLabel?: string;
-  ctaHref?: string;
-}) {
+  products = [],
+}: SearchSectionProps) {
   const router = useRouter();
   const [query, setQuery] = useState("");
+  const [isFocused, setIsFocused] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
+  /* ---------- Live filter ---------- */
+  const results = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    return products.filter((p) =>
+      `${p.title ?? ""} ${p.subtitle ?? ""} ${p.brand ?? ""}`
+        .toLowerCase()
+        .includes(q)
+    );
+  }, [query, products]);
+
+  /* ---------- Close on outside click ---------- */
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (!containerRef.current?.contains(e.target as Node)) {
+        setIsFocused(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  /* ---------- Navigate to full results page ---------- */
   const handleSearch = (value?: string) => {
     const q = (value ?? query).trim();
     if (!q) return;
@@ -39,11 +72,27 @@ export function SearchSection({
           {title}
         </h2>
 
-        <SearchInput
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onSearch={handleSearch}
-        />
+        {/* Search wrapper — relative so dropdown positions under input */}
+        <div ref={containerRef} className="relative">
+          <SearchInput
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onSearch={handleSearch}
+            onFocus={() => setIsFocused(true)}
+            placeholder="ابحث عن كنبة، سرير، أثاث..."
+          />
+
+          {/* Live results dropdown */}
+          <InstantSearchResults
+            results={results}
+            query={query}
+            visible={isFocused && query.trim().length > 0}
+            onSelect={() => {
+              setIsFocused(false);
+              setQuery("");
+            }}
+          />
+        </div>
 
         <FeatureCard {...feature} />
 

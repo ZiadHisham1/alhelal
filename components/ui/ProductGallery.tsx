@@ -29,6 +29,7 @@ export function ProductGallery({
           priority
           sizes="(max-width: 768px) 100vw, 720px"
           className="object-cover"
+          unoptimized
         />
       </div>
 
@@ -56,6 +57,7 @@ export function ProductGallery({
                 fill
                 sizes="80px"
                 className="object-cover"
+                unoptimized
               />
             </button>
           ))}

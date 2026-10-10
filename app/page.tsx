@@ -5,8 +5,11 @@ import { SearchSection } from "@/components/section/SearchSection";
 import { OffersSection } from "@/components/section/OffersSection";
 import { ReviewsSection } from "@/components/section/ReviewSection";
 import { Footer } from "@/components/layout/Footer";
+import { fetchProducts } from "@/lib/product-server";
 
-export default function HomePage() {
+export default async function HomePage() {
+ const products = await fetchProducts();
+
   return (
     <main className="relative bg-cream-100">
       {/* Fixed navbar above everything */}
@@ -29,6 +32,7 @@ export default function HomePage() {
 
       {/* Layer 20 — search sheet rises over category */}
       <SearchSection
+        products={products}
         title="اعمل سيرش علي اي منتج"
         ctaLabel="ابحث عن المزيد"
       />

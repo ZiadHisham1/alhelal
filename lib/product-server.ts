@@ -1,8 +1,18 @@
-// src/lib/product-server.ts
+// lib/product-server.ts
 import { cacheLife, cacheTag } from "next/cache";
 import { medusa } from "./medusa";
 import { getDefaultRegion } from "./medusa-server";
 import type { Product } from "./products";
+
+const MEDUSA_URL = process.env.NEXT_PUBLIC_MEDUSA_URL!;
+
+/** Ensure Medusa's relative image URLs become absolute */
+function toAbsoluteUrl(url: string | null | undefined): string {
+  if (!url) return "/img/placeholder.jpg";
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  if (url.startsWith("/")) return `${MEDUSA_URL}${url}`;
+  return url;
+}
 
 export async function fetchProducts(): Promise<Product[]> {
   "use cache";
@@ -15,7 +25,7 @@ export async function fetchProducts(): Promise<Product[]> {
     limit: 100,
     region_id: region.id,
     fields:
-      "+variants.calculated_price,+variants.inventory_quantity,+variants.id,+variants.title",
+      "*,+variants.calculated_price,+variants.inventory_quantity,+variants.id,+variants.title",
   });
 
   return products.map(mapProduct);
@@ -28,12 +38,11 @@ export async function fetchProduct(slug: string): Promise<Product | null> {
 
   const region = await getDefaultRegion();
 
-  // 🔑 Query by handle — the exact same value in the URL
   const { products } = await medusa.store.product.list({
     handle: slug,
     region_id: region.id,
     fields:
-      "+variants.calculated_price,+variants.inventory_quantity,+variants.id,+variants.title",
+      "*,+variants.calculated_price,+variants.inventory_quantity,+variants.id,+variants.title",
   });
 
   const p = products[0];
@@ -49,13 +58,13 @@ function mapProduct(p: any): Product {
 
   return {
     id: p.id,
-    handle: p.handle,                    // ✅ critical
-    variantId: variant?.id,              // ✅ critical
+    handle: p.handle,
+    variantId: variant?.id,
     title: p.title,
     subtitle: p.subtitle ?? "",
     brand: p.collection?.title ?? undefined,
-    image: p.thumbnail ?? p.images?.[0]?.url ?? "/img/placeholder.jpg",
-    href: `/product/${p.handle}`,        // ✅ uses handle
+    image: toAbsoluteUrl(p.thumbnail ?? p.images?.[0]?.url),
+    href: `/product/${p.handle}`,
     categories: (p.categories ?? []).map((c: any) => c.handle),
     price: amount / 100,
     inStock: (variant?.inventory_quantity ?? 0) > 0,

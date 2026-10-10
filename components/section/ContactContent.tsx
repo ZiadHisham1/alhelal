@@ -61,14 +61,14 @@ export function ContactContent() {
             <ContactMethod
               icon="phone"
               label="اتصل بنا"
-              value="+20 100 000 0000"
-              href="tel:+201000000000"
+              value="+20 12 1430 8629"
+              href="tel:+201214308629"
             />
             <ContactMethod
               icon="whatsapp"
               label="واتساب"
               value="ابدأ محادثة"
-              href="https://wa.me/201000000000"
+              href="https://wa.me/201214308629"
               external
             />
             <ContactMethod
