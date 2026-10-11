@@ -1,5 +1,6 @@
 // src/app/layout.tsx
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Lalezar } from "next/font/google";
 import { siteConfig } from "@/config/site";
 import "./globals.css";
@@ -28,12 +29,31 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl" className={lalezar.variable}>
       <body className="min-h-screen bg-cream-50 text-ink antialiased">
-        <Navbar />
+        {/* Navbar — wrapped in Suspense so usePathname() doesn't block prerender */}
+        <Suspense fallback={<NavbarPlaceholder />}>
+          <Navbar />
+        </Suspense>
+
         {children}
+
         <CartDrawer />
         <CartInit />
-        <Footer />
+
+        <Suspense fallback={null}>
+          <Footer />
+        </Suspense>
       </body>
     </html>
+  );
+}
+
+/* Minimal placeholder shown during prerender while Navbar's pathname resolves */
+function NavbarPlaceholder() {
+  return (
+    <div className="fixed top-3 inset-x-0 z-50 px-3 sm:px-6 pointer-events-none">
+      <div className="mx-auto w-full max-w-[720px] lg:max-w-[1100px] pointer-events-auto">
+        <div className="h-[52px] lg:h-[60px] rounded-2xl lg:rounded-glass bg-white/20" />
+      </div>
+    </div>
   );
 }

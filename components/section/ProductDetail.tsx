@@ -379,4 +379,4 @@ function RelatedProductCard({ product }: { product: Product }) {
       </div>
     </Link>
   );
-}
+} 

@@ -3,7 +3,6 @@ export interface ProductSpec {
   value: string;
 }
 
-// lib/products.ts (just the interface portion)
 export interface Product {
   id: string;
   handle?: string;
@@ -12,15 +11,27 @@ export interface Product {
   subtitle?: string;
   brand?: string;
   image: string;
+  /** Multiple images for the gallery */
+  images?: string[];
   href: string;
   categories: string[];
   price: number;
-  /** For availability filter */
-  inStock?: boolean;
-  /** For "new" sort + "recently added" filter */
-  created_at?: string;
-  /** Optional — for "sale" badge */
+  /** Old price for sale display */
   oldPrice?: number;
+  /** Marks new products */
+  isNew?: boolean;
+  /** Marks products on sale */
+  onSale?: boolean;
+  /** Short description */
+  description?: string;
+  /** Detail bullet list */
+  highlights?: string[];
+  /** Detail spec list */
+  specs?: ProductSpec[];
+  /** Stock status */
+  inStock?: boolean;
+  /** ISO timestamp of when the product was created */
+  created_at?: string;
 }
 
 export const allProducts: Product[] = [

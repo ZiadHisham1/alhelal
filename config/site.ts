@@ -5,14 +5,12 @@ export const siteConfig = {
     secondary: "فيرنتشر",
   },
   nav: {
-    // Icon buttons
     menu: { label: "القائمة", href: "/menu", icon: "menu" },
     cart: { label: "سلة التسوق", href: "/cart", icon: "cart" },
     profile: { label: "الملف الشخصي", href: "/profile", icon: "profile" },
     search: { label: "البحث", href: "/search", icon: "search" },
     arrow: { label: "المزيد", href: "/more", icon: "arrow" },
 
-    // 👇 NEW — desktop nav links
     links: [
       { label: "الرئيسية", href: "/" },
       { label: "المجموعة", href: "/collection" },
@@ -22,6 +20,7 @@ export const siteConfig = {
   },
 } as const;
 
-export type IconName = keyof typeof siteConfig.nav extends never
-  ? never
-  : (typeof siteConfig.nav)[keyof typeof siteConfig.nav]["icon"];
+const iconNavKeys = ["menu", "cart", "profile", "search", "arrow"] as const;
+
+export type IconName =
+  (typeof siteConfig.nav)[(typeof iconNavKeys)[number]]["icon"];

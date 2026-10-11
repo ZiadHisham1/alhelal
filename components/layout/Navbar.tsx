@@ -244,7 +244,7 @@ function MobileDrawer({
 
         <div className="p-5 border-t border-black/5">
           <p className="text-xs text-ink/50 text-center font-lalezar">
-            © {new Date().getFullYear()} {siteConfig.name}
+            © 2026 {siteConfig.name}
           </p>
         </div>
       </aside>

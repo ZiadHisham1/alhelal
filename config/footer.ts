@@ -135,5 +135,5 @@ export const footerConfig = {
     { label: "الكوكيز", href: "/cookies" },
   ],
 
-  copyright: `© ${new Date().getFullYear()} الهلال فيرنتشر. جميع الحقوق محفوظة.`,
+  copyright: `© 2026 الهلال فيرنتشر. جميع الحقوق محفوظة.`,
 };

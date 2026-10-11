@@ -5,7 +5,7 @@ import { NewsletterForm } from "@/components/ui/NewsletterForm";
 import { BackToTop } from "@/components/ui/BackToTop";
 import { ContactIcon } from "@/components/ui/ContactItemIcon";
 import { footerConfig } from "@/config/footer";
-
+  
 interface FooterProps {
   className?: string;
 }
