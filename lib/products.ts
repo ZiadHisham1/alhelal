@@ -3,31 +3,24 @@ export interface ProductSpec {
   value: string;
 }
 
+// lib/products.ts (just the interface portion)
 export interface Product {
   id: string;
+  handle?: string;
+  variantId?: string;
   title: string;
   subtitle?: string;
   brand?: string;
   image: string;
-  /** Multiple images for the gallery */
-  images?: string[];
   href: string;
   categories: string[];
   price: number;
-  /** Old price for "was/now" display */
-  oldPrice?: number;
-  isNew?: boolean;
-  onSale?: boolean;
-  /** Short marketing description */
-  description?: string;
-  /** Detail bullet list */
-  specs?: ProductSpec[];
-  /** Highlights row (icons + text) */
-  highlights?: string[];
-  /** Optional stock — undefined = available */
+  /** For availability filter */
   inStock?: boolean;
-  handle?: string;
-  variantId?: string;
+  /** For "new" sort + "recently added" filter */
+  created_at?: string;
+  /** Optional — for "sale" badge */
+  oldPrice?: number;
 }
 
 export const allProducts: Product[] = [

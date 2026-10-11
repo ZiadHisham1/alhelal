@@ -69,5 +69,6 @@ function mapProduct(p: any): Product {
     price: amount / 100,
     inStock: (variant?.inventory_quantity ?? 0) > 0,
     description: p.description ?? undefined,
+    created_at: p.created_at,
   };
 }

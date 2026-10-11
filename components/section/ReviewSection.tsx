@@ -34,7 +34,7 @@ const reviews: Review[] = [
 
 export function ReviewsSection() {
   return (
-    <Sheet layer={40} pin={false}>
+    <Sheet layer={20} pin={false}>
       <h2 className="font-lalezar text-2xl sm:text-3xl text-ink text-center mb-8">
         آراء عملائنا
       </h2>

@@ -59,13 +59,24 @@ async function ProductContent({ params }: { params: Promise<Params> }) {
   if (!product) notFound();
 
   const all = await fetchProducts();
-  const related = all
-    .filter(
-      (p) =>
-        p.handle !== product.handle &&
-        p.categories.some((c) => product.categories.includes(c))
-    )
-    .slice(0, 3);
+
+  /* ─── Related products: flexible fallback strategy ───
+     1. First try: products sharing a category with the current product
+     2. Fallback:  any other products (so the row always shows something)
+     3. Final:     limited to 4 items */
+  const sameCategory = all.filter(
+    (p) =>
+      p.handle !== product.handle &&
+      p.categories.length > 0 &&
+      product.categories.length > 0 &&
+      p.categories.some((c) => product.categories.includes(c))
+  );
+
+  const related = (
+    sameCategory.length > 0
+      ? sameCategory
+      : all.filter((p) => p.handle !== product.handle)
+  ).slice(0, 4);
 
   return <ProductDetail product={product} related={related} />;
 }

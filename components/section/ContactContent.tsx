@@ -45,7 +45,7 @@ export function ContactContent() {
       <Sheet layer={10}>
         <div className="max-w-[720px] mx-auto space-y-4 text-center">
           <h1 className="font-lalezar text-3xl sm:text-4xl text-ink">
-            تواصل معنا
+            لمعرفة العروض تواصل معنا
           </h1>
           <p className="text-ink/70 leading-relaxed max-w-[520px] mx-auto">
             عندك سؤال عن منتج؟ محتاج مساعدة في اختيار؟ أو حابب تزور معرضنا؟
@@ -74,8 +74,8 @@ export function ContactContent() {
             <ContactMethod
               icon="mail"
               label="البريد الإلكتروني"
-              value="hello@alhelal.com"
-              href="mailto:hello@alhelal.com"
+              value="alhelal.furniture@gmail.com"
+              href="mailto:alhelal.furniture@gmail.com"
             />
           </div>
         </div>
@@ -198,9 +198,9 @@ export function ContactContent() {
             <div className="rounded-[28px] bg-white/60 ring-1 ring-ink/10 p-5 space-y-2 text-right">
               <h3 className="font-lalezar text-lg text-ink">العنوان</h3>
               <p className="text-sm text-ink/70 leading-relaxed">
-                القاهرة الجديدة، التجمع الخامس
+                مكتبة الهواري 4ش117من شارع العشرين خلف حديقة بدر، 4ش 117من شارع العشرين خلف حديقة بدر, Gesr Al Suez
                 <br />
-                مول المحور، الدور الثاني
+                {/* مول المحور، الدور الثاني */}
                 <br />
                 مصر
               </p>
@@ -222,7 +222,7 @@ export function ContactContent() {
                 📍 القاهرة الجديدة
               </p>
               <a
-                href="https://maps.google.com/?q=New+Cairo+Egypt"
+                href="https://www.google.com/maps/place/30%C2%B008'17.2%22N+31%C2%B021'59.8%22E/@30.1381186,31.3640425,17z/data=!3m1!4b1!4m4!3m3!8m2!3d30.1381186!4d31.3666174?hl=en&entry=ttu&g_ep=EgoyMDI2MTAwNy4wIKXMDSoASAFQAw%3D%3D"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="

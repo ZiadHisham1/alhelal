@@ -6,6 +6,8 @@ import { OffersSection } from "@/components/section/OffersSection";
 import { ReviewsSection } from "@/components/section/ReviewSection";
 import { Footer } from "@/components/layout/Footer";
 import { fetchProducts } from "@/lib/product-server";
+import FaqSection from "@/components/section/FaqSection";
+import { faqs } from "@/data/faq";
 
 export default async function HomePage() {
  const products = await fetchProducts();
@@ -13,12 +15,8 @@ export default async function HomePage() {
   return (
     <main className="relative bg-cream-100">
       {/* Fixed navbar above everything */}
-      <div className="fixed top-3 inset-x-0 z-50 px-3 pointer-events-none">
-        <div className="pointer-events-auto">
-          <Navbar />
-        </div>
-      </div>
-
+      {/* <Navbar /> */}
+ 
       {/* Layer 0 — sticky hero */}
       <Hero
         image="/img/hero-sofa.jpg"
@@ -30,18 +28,20 @@ export default async function HomePage() {
       {/* Layer 10 — category sheet rises over hero */}
       <CategoryPrompt />
 
-      {/* Layer 20 — search sheet rises over category */}
-      <SearchSection
-        products={products}
-        title="اعمل سيرش علي اي منتج"
-        ctaLabel="ابحث عن المزيد"
-      />
+      <ReviewsSection />
 
       <OffersSection />
 
-      <ReviewsSection />
+      {/* Layer 20 — search sheet rises over category */}
+      <SearchSection
+        products={products}
+        title="اعمل سيرش علي اي منتج او اعمله عمولة"
+        ctaLabel="ابحث عن المزيد"
+      />
 
-      <Footer />
+      <FaqSection faqs={faqs} />
+
+      {/* <Footer /> */}
     </main>
   );
 }

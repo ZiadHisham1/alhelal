@@ -1,4 +1,3 @@
-// src/app/actions/checkout.ts
 "use server";
 
 import { medusa } from "@/lib/medusa";
@@ -10,16 +9,43 @@ export async function saveShippingAddress(
     last_name: string;
     phone: string;
     address_1: string;
+    address_2?: string;
     city: string;
-    postal_code: string;
+    postal_code?: string;
     country_code: string;
   },
-  email: string
+  email?: string,
+  metadata?: Record<string, any>
 ) {
-  const { cart } = await medusa.store.cart.update(cartId, {
-    email,
-    shipping_address: address,
-  });
+  const payload: any = {
+    shipping_address: {
+      first_name: address.first_name,
+      last_name: address.last_name,
+      phone: address.phone,
+      address_1: address.address_1,
+      address_2: address.address_2 || "",
+      city: address.city,
+      postal_code: address.postal_code || "",
+      country_code: address.country_code,
+    },
+  };
+
+  if (email && email.trim()) {
+    payload.email = email;
+  }
+
+  const { cart } = await medusa.store.cart.update(cartId, payload);
+
+  if (metadata && Object.keys(metadata).length > 0) {
+    try {
+      await medusa.store.cart.update(cartId, {
+        metadata: { ...(cart.metadata ?? {}), ...metadata },
+      });
+    } catch (e) {
+      console.warn("[saveShippingAddress] metadata update failed:", e);
+    }
+  }
+
   return cart;
 }
 

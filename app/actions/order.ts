@@ -1,18 +1,39 @@
 "use server";
 
-import { medusa } from "@/lib/medusa";
+export async function lookupOrder(query: string) {
+  const trimmed = query.trim();
+  if (!trimmed) return null;
 
-export async function lookupOrder(orderId: string, email: string) {
+  const baseUrl = process.env.NEXT_PUBLIC_MEDUSA_URL;
+  const pk = process.env.NEXT_PUBLIC_MEDUSA_KEY;
+
+  if (!baseUrl || !pk) {
+    console.error("[lookupOrder] missing env vars");
+    return null;
+  }
+
   try {
-    const { order } = await medusa.store.order.retrieve(orderId);
+    const res = await fetch(
+      `${baseUrl}/store/order-lookup?q=${encodeURIComponent(trimmed)}`,
+      {
+        headers: { "x-publishable-api-key": pk },
+        cache: "no-store",
+      }
+    );
 
-    // Verify email matches — order.email is set at checkout
-    if (!order || order.email?.toLowerCase() !== email.toLowerCase()) {
+    if (!res.ok) {
+      // 404 = not found, other errors = log
+      if (res.status !== 404) {
+        const txt = await res.text();
+        console.error("[lookupOrder] failed:", res.status, txt);
+      }
       return null;
     }
 
-    return { id: order.id };
-  } catch {
+    const data = await res.json();
+    return data.order ?? null;
+  } catch (e) {
+    console.error("[lookupOrder] fetch failed:", e);
     return null;
   }
 }

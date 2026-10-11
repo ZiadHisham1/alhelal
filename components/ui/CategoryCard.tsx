@@ -22,10 +22,10 @@ export function CategoryCard({
   return (
     <Link
       href={href}
-      className={cn(
-        "group relative block w-full h-[150px] overflow-hidden",
+     className={cn(
+        "group relative block w-full overflow-hidden",
         "rounded-[28px]",
-        "aspect-[4/3] sm:aspect-[16/10]",
+        "aspect-[4/3] sm:aspect-[16/10]",   // ← no fixed height
         "shadow-card",
         "transition-transform duration-300 active:scale-[0.99]",
         className
@@ -43,7 +43,7 @@ export function CategoryCard({
         "
       />
 
-      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+      <div className="absolute inset-0 bg-black/30" />
 
       <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
         <h3 className="font-lalezar text-4xl text-white leading-[1.05] drop-shadow-sm">

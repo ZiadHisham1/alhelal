@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 
 export default function ContactPage() {
   return (
-    <main className="relative bg-cream-100 min-h-screen">
+    <main className="relative bg-cream-100 pt-15 min-h-screen">
       <div className="py-6 mx-5">
           <PageHeader />
       </div>

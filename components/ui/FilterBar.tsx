@@ -1,103 +1,280 @@
+// components/ui/FilterBar.tsx
 "use client";
 
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
-import { categories, type CategoryId } from "@/lib/products";
 
-export type SortKey = "featured" | "price-asc" | "price-desc" | "newest";
+export type SortKey = "featured" | "newest" | "price-asc" | "price-desc";
+export type DateFilter = "all" | "week" | "month" | "three-months";
+export type StockFilter = "all" | "in-stock" | "out-of-stock";
+
+export interface FilterState {
+  priceMin: number | null;
+  priceMax: number | null;
+  stock: StockFilter;
+  date: DateFilter;
+  sort: SortKey;
+}
+
+export const DEFAULT_FILTERS: FilterState = {
+  priceMin: null,
+  priceMax: null,
+  stock: "all",
+  date: "all",
+  sort: "featured",
+};
+
+interface FilterBarProps {
+  filters: FilterState;
+  onFiltersChange: (next: FilterState) => void;
+  /** Min and max price present in the product set (for slider bounds + placeholder) */
+  priceBounds: { min: number; max: number };
+  resultCount: number;
+  /** "horizontal" for mobile drawer, "vertical" for desktop sidebar */
+  orientation?: "horizontal" | "vertical";
+}
 
 const sortOptions: { id: SortKey; label: string }[] = [
   { id: "featured", label: "الأكثر رواجاً" },
-  { id: "newest", label: "الأحدث" },
-  { id: "price-asc", label: "السعر: من الأقل" },
-  { id: "price-desc", label: "السعر: من الأعلى" },
+  { id: "newest", label: "الأحدث أولاً" },
+  { id: "price-asc", label: "السعر: من الأقل للأعلى" },
+  { id: "price-desc", label: "السعر: من الأعلى للأقل" },
 ];
 
-interface FilterBarProps {
-  activeCategory: CategoryId;
-  onCategoryChange: (id: CategoryId) => void;
-  activeSort: SortKey;
-  onSortChange: (id: SortKey) => void;
-  resultCount: number;
-}
+const dateOptions: { id: DateFilter; label: string }[] = [
+  { id: "all", label: "الكل" },
+  { id: "week", label: "آخر أسبوع" },
+  { id: "month", label: "آخر شهر" },
+  { id: "three-months", label: "آخر 3 شهور" },
+];
 
 export function FilterBar({
-  activeCategory,
-  onCategoryChange,
-  activeSort,
-  onSortChange,
+  filters,
+  onFiltersChange,
+  priceBounds,
   resultCount,
+  orientation = "horizontal",
 }: FilterBarProps) {
+  const isVertical = orientation === "vertical";
+
+  /* Local state for the price inputs so typing doesn't re-filter on every keystroke */
+  const [priceMinLocal, setPriceMinLocal] = useState<string>(
+    filters.priceMin?.toString() ?? ""
+  );
+  const [priceMaxLocal, setPriceMaxLocal] = useState<string>(
+    filters.priceMax?.toString() ?? ""
+  );
+
+  /* Sync local state if parent resets */
+  useEffect(() => {
+    setPriceMinLocal(filters.priceMin?.toString() ?? "");
+    setPriceMaxLocal(filters.priceMax?.toString() ?? "");
+  }, [filters.priceMin, filters.priceMax]);
+
+  const update = <K extends keyof FilterState>(
+    key: K,
+    value: FilterState[K]
+  ) => {
+    onFiltersChange({ ...filters, [key]: value });
+  };
+
+  const applyPrice = () => {
+    const min = priceMinLocal ? Number(priceMinLocal) : null;
+    const max = priceMaxLocal ? Number(priceMaxLocal) : null;
+    onFiltersChange({ ...filters, priceMin: min, priceMax: max });
+  };
+
+  const clearPrice = () => {
+    setPriceMinLocal("");
+    setPriceMaxLocal("");
+    onFiltersChange({ ...filters, priceMin: null, priceMax: null });
+  };
+
+  const resetAll = () => onFiltersChange(DEFAULT_FILTERS);
+
+  const hasActiveFilters =
+    filters.priceMin !== null ||
+    filters.priceMax !== null ||
+    filters.stock !== "all" ||
+    filters.date !== "all" ||
+    filters.sort !== "featured";
+
   return (
-    <div className="space-y-4">
-      {/* Category chips */}
-      <div
-        className="
-          flex gap-2 overflow-x-auto pb-1
-          -mx-4 px-4
-          sm:mx-0 sm:px-0 sm:flex-wrap sm:justify-center
-          scrollbar-hide
-        "
-      >
-        {categories.map((c) => {
-          const active = c.id === activeCategory;
-          return (
+    <div className={cn("space-y-6", !isVertical && "space-y-5")}>
+      {/* ---------- SORT ---------- */}
+      <Section title="ترتيب حسب">
+        <select
+          value={filters.sort}
+          onChange={(e) => update("sort", e.target.value as SortKey)}
+          className={cn(
+            "w-full rounded-full bg-white ring-1 ring-ink/10",
+            "font-lalezar text-ink px-4",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30",
+            "appearance-none cursor-pointer",
+            isVertical ? "h-11 text-base" : "h-10 text-sm"
+          )}
+        >
+          {sortOptions.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      </Section>
+
+      {/* ---------- PRICE ---------- */}
+      <Section title="السعر">
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            inputMode="numeric"
+            placeholder={`${priceBounds.min}`}
+            value={priceMinLocal}
+            onChange={(e) => setPriceMinLocal(e.target.value)}
+            onBlur={applyPrice}
+            onKeyDown={(e) => e.key === "Enter" && applyPrice()}
+            className={cn(
+              "flex-1 min-w-0 h-10 rounded-full px-3",
+              "bg-white ring-1 ring-ink/10",
+              "font-lalezar text-ink text-sm text-center",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30",
+              "placeholder:text-ink/40"
+            )}
+          />
+          <span className="text-ink/40 font-lalezar text-sm shrink-0">إلى</span>
+          <input
+            type="number"
+            inputMode="numeric"
+            placeholder={`${priceBounds.max}`}
+            value={priceMaxLocal}
+            onChange={(e) => setPriceMaxLocal(e.target.value)}
+            onBlur={applyPrice}
+            onKeyDown={(e) => e.key === "Enter" && applyPrice()}
+            className={cn(
+              "flex-1 min-w-0 h-10 rounded-full px-3",
+              "bg-white ring-1 ring-ink/10",
+              "font-lalezar text-ink text-sm text-center",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30",
+              "placeholder:text-ink/40"
+            )}
+          />
+        </div>
+
+        {(filters.priceMin !== null || filters.priceMax !== null) && (
+          <button
+            type="button"
+            onClick={clearPrice}
+            className="text-xs text-rose-600 hover:text-rose-700 font-lalezar mt-2"
+          >
+            إزالة فلتر السعر
+          </button>
+        )}
+      </Section>
+
+      {/* ---------- AVAILABILITY ---------- */}
+      <Section title="التوفر">
+        <div className="space-y-2">
+          {[
+            { id: "all" as StockFilter, label: "الكل" },
+            { id: "in-stock" as StockFilter, label: "متوفر" },
+            { id: "out-of-stock" as StockFilter, label: "غير متوفر" },
+          ].map((opt) => (
             <button
-              key={c.id}
+              key={opt.id}
               type="button"
-              onClick={() => onCategoryChange(c.id)}
-              aria-pressed={active}
+              onClick={() => update("stock", opt.id)}
               className={cn(
-                "shrink-0 px-4 h-10 rounded-full",
-                "font-lalezar text-base whitespace-nowrap",
-                "transition-colors duration-200",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30",
-                active
+                "w-full flex items-center gap-3 text-right",
+                "px-3 py-2 rounded-xl",
+                "font-lalezar text-base transition-colors",
+                filters.stock === opt.id
                   ? "bg-ink text-white"
-                  : "bg-white/60 text-ink hover:bg-white"
+                  : "text-ink hover:bg-white"
               )}
             >
-              {c.label}
+              <span
+                className={cn(
+                  "w-4 h-4 rounded-full border-2 shrink-0 grid place-items-center transition-colors",
+                  filters.stock === opt.id
+                    ? "border-white bg-white"
+                    : "border-ink/30"
+                )}
+              >
+                {filters.stock === opt.id && (
+                  <span className="w-2 h-2 rounded-full bg-ink" />
+                )}
+              </span>
+              {opt.label}
             </button>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      </Section>
 
-      {/* Sort + count row */}
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-xs text-ink/50">
+      {/* ---------- DATE ADDED ---------- */}
+      <Section title="أضيف حديثاً">
+        <select
+          value={filters.date}
+          onChange={(e) => update("date", e.target.value as DateFilter)}
+          className={cn(
+            "w-full rounded-full bg-white ring-1 ring-ink/10",
+            "font-lalezar text-ink px-4",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30",
+            "appearance-none cursor-pointer",
+            isVertical ? "h-11 text-base" : "h-10 text-sm"
+          )}
+        >
+          {dateOptions.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      </Section>
+
+      {/* ---------- RESULT COUNT + RESET ---------- */}
+      <div
+        className={cn(
+          "pt-4 border-t border-ink/10 space-y-3",
+          !isVertical && "hidden"
+        )}
+      >
+        <p className="font-lalezar text-sm text-ink/60 text-right">
           {resultCount} منتج
-        </span>
+        </p>
 
-        <div className="flex items-center gap-2">
-          <label
-            htmlFor="sort"
-            className="text-xs text-ink/50 font-lalezar"
-          >
-            ترتيب حسب
-          </label>
-          <select
-            id="sort"
-            value={activeSort}
-            onChange={(e) => onSortChange(e.target.value as SortKey)}
+        {hasActiveFilters && (
+          <button
+            type="button"
+            onClick={resetAll}
             className="
-              h-9 pr-3 pl-8 rounded-full
-              bg-white/70 hover:bg-white
-              border border-ink/10
-              font-lalezar text-sm text-ink
-              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30
-              appearance-none
-              bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 12 12%22><path d=%22M3 5l3 3 3-3%22 fill=%22none%22 stroke=%22%23171717%22 stroke-width=%221.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/></svg>')]
-              bg-no-repeat bg-[length:12px_12px] bg-[position:left_10px_center]
+              w-full h-10 rounded-full
+              bg-rose-50 text-rose-700
+              font-lalezar text-sm
+              hover:bg-rose-100 transition
             "
           >
-            {sortOptions.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-        </div>
+            إزالة كل الفلاتر
+          </button>
+        )}
       </div>
+    </div>
+  );
+}
+
+/* ---------- Section wrapper ---------- */
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <h3 className="font-lalezar text-base text-ink mb-3 text-right">
+        {title}
+      </h3>
+      {children}
     </div>
   );
 }

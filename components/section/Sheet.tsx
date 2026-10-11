@@ -1,3 +1,4 @@
+// components/section/Sheet.tsx
 import { cn } from "@/lib/utils";
 
 const LAYER_MAP = {
@@ -9,31 +10,13 @@ const LAYER_MAP = {
 
 type Layer = keyof typeof LAYER_MAP;
 
-/* =========================================================================
-   StackedSheet — pins to top; content flows; NEXT sheet rises only after
-   user has scrolled through ALL of this sheet's content.
-   ========================================================================= */
 interface StackedSheetProps {
   children: React.ReactNode;
   className?: string;
   layer?: Layer;
   overlapClass?: string;
   bgClass?: string;
-  /** Accepted but ignored — StackedSheet always pins via its sticky wrapper */
   pin?: boolean;
-  /** Accepted but ignored — position is controlled by the sticky wrapper */
-  topOffset?: number | string;
-}
-
-interface SheetProps {
-  children: React.ReactNode;
-  className?: string;
-  layer?: Layer;
-  overlapClass?: string;
-  bgClass?: string;
-  /** Accepted for API parity. If true, wraps the sheet in a sticky div. */
-  pin?: boolean;
-  /** Distance from viewport top when `pin` is true. Default 0. */
   topOffset?: number | string;
 }
 
@@ -43,60 +26,71 @@ export function StackedSheet({
   layer = 10,
   overlapClass = "-mt-6",
   bgClass = "bg-cream-100",
+  topOffset = 72,
 }: StackedSheetProps) {
   return (
-    /* Sticky wrapper: sticks to top while the whole sheet scrolls */
-    <div className={cn("sticky top-0", LAYER_MAP[layer])}>
-      <section
-        className={cn(
-          /* Full viewport minimum — content can be taller */
-          "relative min-h-screen w-full",
-          /* Visuals */
-          bgClass,
-          "rounded-t-[28px]",
-          overlapClass,
-          "pt-8 pb-16 px-4",
-          "shadow-[0_-8px_24px_rgba(0,0,0,0.08)]",
-          className
-        )}
+    <div className={cn("relative", LAYER_MAP[layer], overlapClass)}>
+      <div
+        className="sticky lg:static"
+        style={{
+          top: typeof topOffset === "number" ? `${topOffset}px` : topOffset,
+        }}
       >
-        <div className="mx-auto w-full max-w-[720px]">
-          {children}
-        </div>
-      </section>
+        <section
+          className={cn(
+            "relative w-full min-h-screen lg:min-h-0",
+            bgClass,
+            "rounded-t-[28px] lg:rounded-none",
+            "pt-8 pb-16 px-4",
+            "shadow-[0_-8px_24px_rgba(0,0,0,0.08)] lg:shadow-none",
+            className
+          )}
+        >
+          <div className="mx-auto w-full max-w-[720px] lg:max-w-[1200px]">
+            {children}
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
 
-
+interface SheetProps {
+  children: React.ReactNode;
+  className?: string;
+  layer?: Layer;
+  overlapClass?: string;
+  bgClass?: string;
+  pin?: boolean;
+  topOffset?: number | string;
+}
 
 export function Sheet({
   children,
   className,
-  layer = 10,
+  layer = 40,
   overlapClass = "-mt-6",
   bgClass = "bg-cream-100",
-  pin = true,
-  topOffset = 0,
 }: SheetProps) {
-  const inner = (
-    <section className={cn("relative w-full", bgClass, "rounded-t-[28px]", "pt-8 pb-16 px-4", "shadow-[0_-8px_24px_rgba(0,0,0,0.08)]", className)}>
-      <div className="mx-auto w-full max-w-[720px]">{children}</div>
+  return (
+    <section
+      className={cn(
+        "relative w-full",
+        LAYER_MAP[layer],
+        bgClass,
+        "rounded-t-[28px] lg:rounded-none",
+        overlapClass,
+        "lg:mt-0",
+        "pt-8 pb-16 px-4",
+        "shadow-[0_-8px_24px_rgba(0,0,0,0.08)] lg:shadow-none",
+        className
+      )}
+    >
+      <div className="mx-auto w-full max-w-[720px] lg:max-w-[1200px]">
+        {children}
+      </div>
     </section>
   );
-
-  return (
-    <div className={cn("relative", LAYER_MAP[layer], overlapClass)}>
-      {pin ? (
-        <div
-          className="sticky"
-          style={{ top: typeof topOffset === "number" ? `${topOffset}px` : topOffset }}
-        >
-          {inner}
-        </div>
-      ) : (
-        inner
-      )}
-    </div>
-  );
 }
+
+export default Sheet;

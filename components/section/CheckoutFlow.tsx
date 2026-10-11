@@ -1,8 +1,10 @@
 // src/components/section/CheckoutFlow.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useCartStore } from "@/lib/cart-store";
 import {
@@ -14,16 +16,19 @@ import {
   initPaymentSession,
   completeOrder,
 } from "@/app/actions/checkout";
-
-type Step = "address" | "shipping" | "payment";
+import { AddressPicker } from "../ui/AddressPicker";
+import { WalletPaymentPanel } from "../ui/WalletPaymentPanel";
 
 interface AddressForm {
   first_name: string;
   last_name: string;
   phone: string;
-  address_1: string;
+  address_1: string;      // street (auto-filled, editable)
+  address_2: string;      // building details (manual)
+  landmark: string;       // nearby landmark (chips + manual)
   city: string;
-  postal_code: string;
+  lat: number | null;
+  lng: number | null;
 }
 
 interface ShippingOption {
@@ -41,25 +46,33 @@ export function CheckoutFlow() {
   const cartId = useCartStore((s) => s.cartId);
   const items = useCartStore((s) => s.items);
   const totalPrice = useCartStore((s) => s.totalPrice);
+  type PaymentChoice = "cod" | "wallet" | null;
+  const [paymentChoice, setPaymentChoice] = useState<PaymentChoice>(null);
+  const [receiptUrl, setReceiptUrl] = useState<string>("");
 
-  const [step, setStep] = useState<Step>("address");
-  const [email, setEmail] = useState("");
+  /* ---------- Form state ---------- */
   const [form, setForm] = useState<AddressForm>({
     first_name: "",
     last_name: "",
     phone: "",
     address_1: "",
-    city: "",
-    postal_code: "",
+    address_2: "",
+    landmark: "",
+    city: "القاهرة",
+    lat: null,
+    lng: null,
   });
 
+  /* ---------- Remote data ---------- */
   const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([]);
   const [selectedShipping, setSelectedShipping] = useState<string | null>(null);
   const [paymentProviders, setPaymentProviders] = useState<PaymentProvider[]>([]);
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
 
+  /* ---------- UI state ---------- */
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showMap, setShowMap] = useState(false);
 
   /* Redirect if cart empty */
   useEffect(() => {
@@ -68,309 +81,522 @@ export function CheckoutFlow() {
     }
   }, [cartId, items.length, router]);
 
-  /* Step 1: address */
-  async function handleAddressSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  /* Preload shipping + payment options */
+  useEffect(() => {
     if (!cartId) return;
-
-    setLoading(true);
-    setError(null);
-    try {
-      await saveShippingAddress(
-        cartId,
-        { ...form, country_code: "eg" },
-        email
-      );
-
-      const options = (await getShippingOptions(cartId)) as ShippingOption[];
-      if (!options.length) {
-        throw new Error(
-          "لا توجد طرق شحن متاحة. تأكد من إعدادها في Medusa admin."
+    (async () => {
+      try {
+        await saveShippingAddress(
+          cartId,
+          {
+            first_name: "Customer",
+            last_name: "Name",
+            phone: "01000000000",
+            address_1: "NA",
+            city: "Cairo",
+            postal_code: "",
+            country_code: "eg",
+          },
+          ""
         );
+
+        const options = (await getShippingOptions(cartId)) as ShippingOption[];
+        if (options.length) {
+          setShippingOptions(options);
+          setSelectedShipping(options[0].id);
+        }
+
+        const cart = await getCart(cartId);
+        const providers = (await getPaymentProviders(
+          cart.region_id ?? ""
+        )) as PaymentProvider[];
+
+        if (providers.length) {
+          setPaymentProviders(providers);
+          setSelectedProvider(providers[0].id);
+          setPaymentChoice("wallet");     // ← default
+        }
+      } catch (e: any) {
+        console.error("[checkout] preload FAILED:", e?.message ?? e);
       }
-      setShippingOptions(options);
-      setStep("shipping");
-    } catch (e: any) {
-      setError(e?.message ?? "حدث خطأ");
-    } finally {
-      setLoading(false);
-    }
+    })();
+  }, [cartId]);
+
+  /* Single submit */
+ async function handleSubmit(e: React.FormEvent) {
+  e.preventDefault();
+  if (!cartId || !selectedShipping || !selectedProvider) return;
+  if (!paymentChoice) {
+    setError("من فضلك اختر طريقة الدفع");
+    return;
+  }
+  if (paymentChoice === "wallet" && !receiptUrl) {
+    setError("من فضلك ارفع صورة الإيصال");
+    return;
   }
 
-  /* Step 2: shipping */
-  async function handleShippingSubmit() {
-    if (!cartId || !selectedShipping) return;
+  setLoading(true);
+  setError(null);
 
-    setLoading(true);
-    setError(null);
-    try {
-      await addShippingMethod(cartId, selectedShipping!);
+  try {
+    const fullAddress2 = [form.address_2, form.landmark]
+      .filter(Boolean)
+      .join(" | ");
 
-      // Need region id → payment providers
-      const cart = await getCart(cartId);
-      const providers = (await getPaymentProviders(
-        cart.region_id ? cart.region_id : ""
-      )) as PaymentProvider[];
+    await saveShippingAddress(
+      cartId,
+      {
+        first_name: form.first_name,
+        last_name: form.last_name,
+        phone: form.phone,
+        address_1: form.address_1,
+        address_2: fullAddress2,
+        city: form.city,
+        postal_code: "",
+        country_code: "eg",
+      },
+      "",
+      paymentChoice === "wallet"
+        ? {
+            payment_method: "wallet",
+            payment_status: "awaiting_review",
+            receipt_url: receiptUrl,
+          }
+        : {
+            payment_method: "cod",
+            payment_status: "on_delivery",
+          }
+    );
 
-      if (!providers.length) {
-        throw new Error(
-          "لا توجد طرق دفع متاحة. فعّل Cash on Delivery في Medusa admin."
-        );
-      }
-      setPaymentProviders(providers);
-      setSelectedProvider(providers[0].id);
-      setStep("payment");
-    } catch (e: any) {
-      setError(e?.message ?? "حدث خطأ");
-    } finally {
-      setLoading(false);
+    await addShippingMethod(cartId, selectedShipping);
+    await initPaymentSession(cartId, selectedProvider);
+
+    const result = await completeOrder(cartId);
+
+    if (result.type === "order" && result.order) {
+      localStorage.removeItem("medusa_cart_id");
+      useCartStore.setState({ cartId: null, items: [] });
+      router.push(`/order/${result.order.id}`);
+    } else {
+      throw new Error("لم يتم إنشاء الطلب. حاول مرة أخرى.");
     }
+  } catch (e: any) {
+    setError(e?.message ?? "حدث خطأ أثناء إتمام الطلب");
+    setLoading(false);
   }
+}
 
-  /* Step 3: payment + complete */
-  async function handleCompleteOrder() {
-    if (!cartId || !selectedProvider) return;
-
-    setLoading(true);
-    setError(null);
-    try {
-      await initPaymentSession(cartId, selectedProvider!);
-      const result = await completeOrder(cartId);
-
-      if (result.type === "order" && result.order) {
-        localStorage.removeItem("medusa_cart_id");
-        useCartStore.setState({ cartId: null, items: [] });
-        router.push(`/order/${result.order.id}`);
-      } else if (result.type === "cart") {
-        // Payment requires additional action (e.g., 3D Secure)
-        throw new Error(
-          "الدفع يحتاج خطوة إضافية غير مدعومة حالياً."
-        );
-      } else {
-        throw new Error("لم يتم إنشاء الطلب. حاول مرة أخرى.");
-      }
-    } catch (e: any) {
-      setError(e?.message ?? "حدث خطأ أثناء إتمام الطلب");
-    } finally {
-      setLoading(false);
-    }
-  }
+  const subtotal = totalPrice();
+  const shippingAmount =
+    shippingOptions.find((o) => o.id === selectedShipping)?.amount ?? 0;
+  const shippingCost = shippingAmount / 100;
+  const total = subtotal + shippingCost;
 
   return (
-    <div className="space-y-6">
-      <Stepper step={step} />
-
-      {error && (
-        <div className="rounded-2xl bg-rose-50 text-rose-700 px-4 py-3 text-sm">
-          {error}
-        </div>
-      )}
-
-      {/* ---------- Step 1 ---------- */}
-      {step === "address" && (
-        <form onSubmit={handleAddressSubmit} className="space-y-4">
-          <Field
-            label="البريد الإلكتروني"
-            type="email"
-            required
-            value={email}
-            onChange={setEmail}
-          />
-          <div className="grid grid-cols-2 gap-4">
-            <Field
-              label="الاسم الأول"
-              required
-              value={form.first_name}
-              onChange={(v) => setForm({ ...form, first_name: v })}
-            />
-            <Field
-              label="الاسم الأخير"
-              required
-              value={form.last_name}
-              onChange={(v) => setForm({ ...form, last_name: v })}
-            />
-          </div>
-          <Field
-            label="رقم الهاتف"
-            type="tel"
-            required
-            value={form.phone}
-            onChange={(v) => setForm({ ...form, phone: v })}
-            placeholder="01xxxxxxxxx"
-          />
-          <Field
-            label="العنوان"
-            required
-            value={form.address_1}
-            onChange={(v) => setForm({ ...form, address_1: v })}
-          />
-          <div className="grid grid-cols-2 gap-4">
-            <Field
-              label="المدينة"
-              required
-              value={form.city}
-              onChange={(v) => setForm({ ...form, city: v })}
-            />
-            <Field
-              label="الرمز البريدي"
-              required
-              value={form.postal_code}
-              onChange={(v) => setForm({ ...form, postal_code: v })}
-            />
-          </div>
-
-          <PrimaryButton loading={loading} type="submit">
-            متابعة إلى الشحن
-          </PrimaryButton>
-        </form>
-      )}
-
-      {/* ---------- Step 2 ---------- */}
-      {step === "shipping" && (
-        <div className="space-y-4">
-          {shippingOptions.map((opt) => (
-            <button
-              key={opt.id}
-              type="button"
-              onClick={() => setSelectedShipping(opt.id)}
-              className={cn(
-                "w-full text-right rounded-2xl p-4 ring-1 transition",
-                selectedShipping === opt.id
-                  ? "ring-ink bg-white"
-                  : "ring-ink/10 bg-white/60 hover:bg-white"
-              )}
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-lalezar text-lg text-ink">
-                  {opt.name}
-                </span>
-                <span className="font-lalezar text-lg text-ink">
-                  {(opt.amount / 100).toLocaleString("ar-EG")} ج.م
-                </span>
-              </div>
-            </button>
-          ))}
-
-          <div className="flex gap-3">
-            <SecondaryButton onClick={() => setStep("address")}>
-              رجوع
-            </SecondaryButton>
-            <PrimaryButton
-              loading={loading}
-              onClick={handleShippingSubmit}
-              disabled={!selectedShipping}
-            >
-              متابعة إلى الدفع
-            </PrimaryButton>
-          </div>
-        </div>
-      )}
-
-      {/* ---------- Step 3 ---------- */}
-      {step === "payment" && (
-        <div className="space-y-4">
-          <div className="rounded-2xl bg-white/60 ring-1 ring-ink/10 p-5 space-y-2">
-            <h3 className="font-lalezar text-lg text-ink">ملخص الطلب</h3>
-            {items.map((i) => (
-              <div
-                key={i.id}
-                className="flex items-center justify-between text-sm text-ink/70"
-              >
-                <span>
-                  {i.title} × {i.quantity}
-                </span>
-                <span>
-                  {(i.unitPrice * i.quantity).toLocaleString("ar-EG")} ج.م
-                </span>
-              </div>
-            ))}
-            <div className="border-t border-ink/10 pt-2 flex items-center justify-between">
-              <span className="font-lalezar">الإجمالي</span>
-              <span className="font-lalezar text-xl">
-                {totalPrice().toLocaleString("ar-EG")} ج.م
-              </span>
+    <form onSubmit={handleSubmit} className="w-full">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-12">
+        {/* ============== LEFT: form ============== */}
+        <div className="order-2 lg:order-1 space-y-8 mt-8 lg:mt-0 min-w-0">
+          <Section title="ادخل بياناتك" number={1}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field
+                label="الاسم الأول"
+                required
+                value={form.first_name}
+                onChange={(v) => setForm({ ...form, first_name: v })}
+                placeholder="محمد"
+                autoComplete="given-name"
+              />
+              <Field
+                label="اسم العائلة"
+                required
+                value={form.last_name}
+                onChange={(v) => setForm({ ...form, last_name: v })}
+                placeholder="أحمد"
+                autoComplete="family-name"
+              />
             </div>
-          </div>
 
-          <div className="space-y-2">
-            {paymentProviders.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => setSelectedProvider(p.id)}
+            <PhoneField
+              value={form.phone}
+              onChange={(v) => setForm({ ...form, phone: v })}
+            />
+
+            {/* ============ ADDRESS SECTION ============ */}
+            <div className="space-y-4 pt-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-ink/60 font-lalezar">
+                  العنوان
+                </span>
+                {form.lat && (
+                  <button
+                    type="button"
+                    onClick={() => setShowMap((v) => !v)}
+                    className="text-xs text-ink/60 hover:text-ink underline font-lalezar"
+                  >
+                    {showMap ? "إخفاء الخريطة" : "عرض الخريطة"}
+                  </button>
+                )}
+              </div>
+
+              {/* Location picker */}
+              <AddressPicker
+                onAddress={(data) => {
+                  setForm((prev) => ({
+                    ...prev,
+                    address_1: data.address_1,
+                    city: data.city || prev.city,
+                    lat: data.lat ?? prev.lat,
+                    lng: data.lng ?? prev.lng,
+                  }));
+                }}
+              />
+
+              {/* Editable street — always visible */}
+              <Field
+                label="اسم الشارع (يمكنك تعديله)"
+                required
+                value={form.address_1}
+                onChange={(v) => setForm({ ...form, address_1: v })}
+                placeholder="مثال: شارع الخزان"
+                autoComplete="address-line1"
+              />
+
+              {/* Building details */}
+              <Field
+                label="تفاصيل المبنى"
+                value={form.address_2}
+                onChange={(v) => setForm({ ...form, address_2: v })}
+                placeholder="عمارة 5، الدور الثالث، شقة 7"
+                autoComplete="address-line2"
+              />
+
+              {/* Landmark chips + free text */}
+              <LandmarkPicker
+                value={form.landmark}
+                onChange={(v) => setForm({ ...form, landmark: v })}
+              />
+
+              {/* City */}
+              <CityField
+                value={form.city}
+                onChange={(v) => setForm({ ...form, city: v })}
+              />
+
+              {/* Map preview */}
+              {showMap && form.lat && form.lng && (
+                <div className="space-y-2">
+                  <div className="w-full aspect-[16/9] rounded-[10px] overflow-hidden ring-1 ring-ink/10">
+                    <iframe
+                      title="موقع التوصيل"
+                      width="100%"
+                      height="100%"
+                      frameBorder="0"
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                      src={`https://www.openstreetmap.org/export/embed.html?bbox=${
+                        form.lng - 0.003
+                      }%2C${form.lat - 0.002}%2C${form.lng + 0.003}%2C${
+                        form.lat + 0.002
+                      }&layer=mapnik&marker=${form.lat}%2C${form.lng}`}
+                    />
+                  </div>
+
+                  <a
+                    href={`https://www.google.com/maps?q=${form.lat},${form.lng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block text-center text-xs text-ink/60 underline hover:text-ink font-lalezar"
+                  >
+                    افتح الموقع في خرائط جوجل
+                  </a>
+                </div>
+              )}
+            </div>
+          </Section>
+
+          {/* SHIPPING */}
+          <Section title="طريقة الشحن" number={2}>
+            {shippingOptions.length === 0 ? (
+              <p className="text-sm text-ink/50 font-lalezar">
+                جاري تحميل طرق الشحن...
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {shippingOptions.map((opt) => {
+                  const active = selectedShipping === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setSelectedShipping(opt.id)}
+                      className={cn(
+                        "w-full text-right rounded-2xl p-4 transition flex items-center justify-between gap-4",
+                        active
+                          ? "ring-2 ring-ink bg-white"
+                          : "ring-1 ring-ink/10 bg-white/60 hover:bg-white"
+                      )}
+                    >
+                      <span className="font-lalezar text-base text-ink">
+                        {opt.name}
+                      </span>
+                      <span className="font-lalezar text-base text-ink shrink-0">
+                        {(opt.amount / 100).toLocaleString("ar-EG")} ج.م
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </Section>
+
+          {/* PAYMENT */}
+          <Section title="طريقة الدفع" number={3}>
+            {/* COD */}
+            <button
+              type="button"
+              onClick={() => setPaymentChoice("cod")}
+              className={cn(
+                "w-full disabled:bg-amber-50 disabled:text-ink/30 text-right rounded-2xl p-4 transition flex items-center gap-3",
+                paymentChoice === "cod"
+                  ? "ring-2 ring-ink bg-white"
+                  : "ring-1 ring-ink/10 bg-white/60 hover:bg-white"
+              )}
+              disabled={true}
+            >
+              <span
                 className={cn(
-                  "w-full text-right rounded-2xl p-4 ring-1 transition",
-                  selectedProvider === p.id
-                    ? "ring-ink bg-white"
-                    : "ring-ink/10 bg-white/60 hover:bg-white"
+                  "w-5 h-5 rounded-full border-2 shrink-0 grid place-items-center transition",
+                  paymentChoice === "cod" ? "border-ink" : "border-ink/30"
                 )}
               >
-                <span className="font-lalezar text-lg text-ink">
-                  الدفع عند الاستلام
-                </span>
-              </button>
-            ))}
-          </div>
+                {paymentChoice === "cod" && (
+                  <span className="w-2.5 h-2.5 rounded-full bg-ink" />
+                )}
+              </span>
+              <span className="flex-1 font-lalezar text-base text-ink">
+                الدفع عند الاستلام
+              </span>
+              <span className="flex-1 font-lalezar text-base text-ink/40">
+                (هذه الميزة خارج الخدمة حالياً.)
+              </span>
+              <span className="text-xs text-ink/50 font-lalezar shrink-0">
+                تدفع لما يوصلك
+              </span>
+            </button>
 
-          <div className="flex gap-3">
-            <SecondaryButton onClick={() => setStep("shipping")}>
-              رجوع
-            </SecondaryButton>
-            <PrimaryButton
-              loading={loading}
-              onClick={handleCompleteOrder}
-              disabled={!selectedProvider}
+            {/* Wallet */}
+            <button
+              type="button"
+              onClick={() => setPaymentChoice("wallet")}
+              className={cn(
+                "w-full text-right rounded-2xl p-4 transition flex items-center gap-3",
+                paymentChoice === "wallet"
+                  ? "ring-2 ring-ink bg-white"
+                  : "ring-1 ring-ink/10 bg-white/60 hover:bg-white"
+              )}
             >
-              تأكيد الطلب
-            </PrimaryButton>
+              <span
+                className={cn(
+                  "w-5 h-5 rounded-full border-2 shrink-0 grid place-items-center transition",
+                  paymentChoice === "wallet" ? "border-ink" : "border-ink/30"
+                )}
+              >
+                {paymentChoice === "wallet" && (
+                  <span className="w-2.5 h-2.5 rounded-full bg-ink" />
+                )}
+              </span>
+              <span className="flex-1 font-lalezar text-base text-ink">
+                فودافون كاش / إنستاباي / فوري
+              </span>
+              <span className="text-xs text-ink/50 font-lalezar shrink-0">
+                ارفع صورة التحويل
+              </span>
+            </button>
+
+            {/* Wallet panel — visible when selected */}
+            {paymentChoice === "wallet" && cartId && (
+              <div className="pt-2">
+                <WalletPaymentPanel
+                  cartId={cartId}
+                  total={total}
+                  onReceiptUploaded={setReceiptUrl}
+                />
+              </div>
+            )}
+          </Section>
+
+          {/* ERROR */}
+          {error && (
+            <div className="rounded-2xl bg-rose-50 text-rose-700 px-4 py-3 text-sm font-lalezar">
+              {error}
+            </div>
+          )}
+
+          {/* SUBMIT */}
+          <div className="pt-2">
+            <button
+              type="submit"
+              disabled={
+              loading ||
+              !selectedShipping ||
+              !selectedProvider ||
+              items.length === 0 ||
+              !paymentChoice ||
+              (paymentChoice === "wallet" && !receiptUrl)
+            }
+              className="
+                w-full h-14 rounded-full
+                bg-ink text-white font-lalezar text-lg
+                hover:bg-ink/90 active:scale-[0.99]
+                disabled:opacity-50 disabled:cursor-not-allowed
+                transition
+                flex items-center justify-center gap-2
+              "
+            >
+              {loading ? (
+                <>
+                  <span className="animate-spin inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full" />
+                  <span>جاري تأكيد الطلب...</span>
+                </>
+              ) : (
+                <>
+                  <span>إتمام الطلب</span>
+                  <span className="text-white/70">
+                    · {(total * 0.5).toLocaleString("ar-EG")} ج.م
+                  </span>
+                </>
+              )}
+            </button>
+
+            <p className="text-center text-xs text-ink/50 mt-3 font-lalezar">
+              بالمتابعة أنت توافق على{" "}
+              <Link href="/terms" className="underline hover:text-ink">
+                الشروط والأحكام
+              </Link>
+            </p>
           </div>
         </div>
-      )}
-    </div>
-  );
-}
 
-/* -------------------- Helpers -------------------- */
+        {/* ============== RIGHT: summary ============== */}
+        <div className="order-1 lg:order-2 min-w-0">
+          <div className="lg:sticky lg:top-[100px]">
+            <div className="rounded-[24px] bg-white/60 ring-1 ring-ink/5 p-5 lg:p-6 space-y-4">
+              <h2 className="font-lalezar text-lg text-ink text-right">
+                ملخص الطلب
+              </h2>
 
-function Stepper({ step }: { step: Step }) {
-  const steps: { id: Step; label: string }[] = [
-    { id: "address", label: "العنوان" },
-    { id: "shipping", label: "الشحن" },
-    { id: "payment", label: "الدفع" },
-  ];
-  const activeIndex = steps.findIndex((s) => s.id === step);
+              <ul className="divide-y divide-ink/5">
+                {items.map((i) => (
+                  <li key={i.id} className="flex items-center gap-3 py-3">
+                    <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-cream-100 shrink-0">
+                      <Image
+                        src={i.image}
+                        alt={i.title}
+                        fill
+                        sizes="56px"
+                        className="object-cover"
+                      />
+                      <span
+                        className="
+                          absolute -top-1.5 -right-1.5
+                          min-w-[20px] h-5 px-1
+                          flex items-center justify-center
+                          rounded-full bg-ink text-white
+                          text-[10px] font-bold
+                        "
+                      >
+                        {i.quantity}
+                      </span>
+                    </div>
 
-  return (
-    <div className="flex items-center justify-center gap-3">
-      {steps.map((s, i) => (
-        <div key={s.id} className="flex items-center gap-2">
-          <span
-            className={cn(
-              "w-8 h-8 grid place-items-center rounded-full text-sm font-lalezar transition",
-              i <= activeIndex
-                ? "bg-ink text-white"
-                : "bg-white/60 text-ink/40"
-            )}
-          >
-            {i + 1}
-          </span>
-          <span
-            className={cn(
-              "font-lalezar text-sm",
-              i <= activeIndex ? "text-ink" : "text-ink/40"
-            )}
-          >
-            {s.label}
-          </span>
-          {i < steps.length - 1 && (
-            <span className="w-6 h-px bg-ink/20" aria-hidden />
-          )}
+                    <div className="flex-1 min-w-0 text-right">
+                      <p className="font-lalezar text-sm text-ink truncate">
+                        {i.title}
+                        {i.subtitle ? ` ${i.subtitle}` : ""}
+                      </p>
+                    </div>
+
+                    <span className="font-lalezar text-sm text-ink shrink-0">
+                      {(i.unitPrice * i.quantity).toLocaleString("ar-EG")} ج.م
+                    </span>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="border-t border-ink/10 pt-4 space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-ink/60 font-lalezar">
+                    المجموع الفرعي
+                  </span>
+                  <span className="font-lalezar text-ink">
+                    {subtotal.toLocaleString("ar-EG")} ج.م
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-ink/60 font-lalezar">الشحن</span>
+                  <span className="font-lalezar text-ink">
+                    {shippingCost > 0
+                      ? `${shippingCost.toLocaleString("ar-EG")} ج.م`
+                      : "—"}
+                  </span>
+                </div>
+
+                <div className="border-t border-ink/10 pt-3 flex items-center justify-between">
+                  <span className="font-lalezar text-lg text-ink">
+                    الإجمالي
+                  </span>
+                  <span className="font-lalezar text-2xl text-ink">
+                    {total.toLocaleString("ar-EG")} ج.م
+                  </span>
+                </div>
+              </div>
+
+              <p className="text-xs text-ink/50 font-lalezar text-center pt-2 border-t border-ink/10">
+                🔒 دفع آمن · ضمان استرجاع 14 علي المنتجات غير العمولة
+              </p>
+            </div>
+          </div>
         </div>
-      ))}
-    </div>
+      </div>
+    </form>
   );
 }
 
+/* ============================================================
+   Section
+   ============================================================ */
+function Section({
+  title,
+  number,
+  children,
+}: {
+  title: string;
+  number: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="space-y-4">
+      <h2 className="flex items-center gap-3 font-lalezar text-lg lg:text-xl text-ink">
+        <span
+          className="
+            w-7 h-7 grid place-items-center rounded-full
+            bg-ink text-white text-sm shrink-0
+          "
+        >
+          {number}
+        </span>
+        {title}
+      </h2>
+      <div className="space-y-4">{children}</div>
+    </section>
+  );
+}
+
+/* ============================================================
+   Field
+   ============================================================ */
 function Field({
   label,
   value,
@@ -378,6 +604,7 @@ function Field({
   type = "text",
   required,
   placeholder,
+  autoComplete,
 }: {
   label: string;
   value: string;
@@ -385,68 +612,280 @@ function Field({
   type?: string;
   required?: boolean;
   placeholder?: string;
+  autoComplete?: string;
 }) {
   return (
-    <label className="block">
-      <span className="block mb-1.5 text-sm text-ink/60 font-lalezar">
-        {label}
-      </span>
+    <div className="w-full">
+      <label className="block w-full">
+        <span className="block mb-1.5 text-sm text-ink/60 font-lalezar">
+          {label}
+        </span>
+        <input
+          type={type}
+          required={required}
+          value={value}
+          placeholder={placeholder}
+          autoComplete={autoComplete}
+          onChange={(e) => onChange(e.target.value)}
+          className="
+            block w-full h-12 rounded-[10px] px-4
+            bg-white ring-1 ring-ink/10
+            font-lalezar text-base text-ink
+            focus:outline-none focus:ring-2 focus:ring-ink/30
+            transition
+          "
+          style={{ minWidth: "100%", maxWidth: "100%" }}
+          dir={type === "tel" || type === "email" ? "ltr" : undefined}
+        />
+      </label>
+    </div>
+  );
+}
+
+/* ============================================================
+   LandmarkPicker — quick chips + free text
+   ============================================================ */
+const LANDMARKS = [
+  "مسجد",
+  "صيدلية",
+  "سوبر ماركت",
+  "بنك",
+  "مدرسة",
+  "مستشفى",
+  "كافيه",
+  "مطعم",
+  "مول",
+];
+
+function LandmarkPicker({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <label className="block text-sm text-ink/60 font-lalezar text-right">
+        علامة مميزة قريبة (اختياري)
+      </label>
+
+      <div className="flex flex-wrap gap-2">
+        {LANDMARKS.map((lm) => {
+          const chipValue = `بجوار ${lm}`;
+          const active = value === chipValue;
+          return (
+            <button
+              key={lm}
+              type="button"
+              onClick={() => onChange(active ? "" : chipValue)}
+              className={cn(
+                "px-3.5 h-9 rounded-full",
+                "font-lalezar text-sm transition",
+                active
+                  ? "bg-ink text-white"
+                  : "bg-white ring-1 ring-ink/10 text-ink hover:bg-cream-50"
+              )}
+            >
+              {lm}
+            </button>
+          );
+        })}
+      </div>
+
       <input
-        type={type}
-        required={required}
+        type="text"
         value={value}
-        placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
+        placeholder="أو اكتب علامة مميزة بنفسك..."
         className="
-          w-full h-12 rounded-full px-4
+          block w-full h-11 rounded-[10px] px-4
           bg-white ring-1 ring-ink/10
-          font-lalezar text-base text-ink
+          font-lalezar text-sm text-ink
           focus:outline-none focus:ring-2 focus:ring-ink/30
+          transition
         "
-        dir={type === "tel" ? "ltr" : undefined}
+        style={{ minWidth: "100%", maxWidth: "100%" }}
       />
-    </label>
+    </div>
   );
 }
 
-function PrimaryButton({
-  children,
-  loading,
-  ...rest
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & { loading?: boolean }) {
+/* ============================================================
+   CityField
+   ============================================================ */
+const EGYPTIAN_CITIES = [
+  "القاهرة",
+  "الجيزة",
+  "الإسكندرية",
+  "المنصورة",
+  "طنطا",
+  "الزقازيق",
+  "بورسعيد",
+  "السويس",
+  "الأقصر",
+  "أسوان",
+  "أسيوط",
+  "سوهاج",
+  "قنا",
+  "المنيا",
+  "بني سويف",
+  "الفيوم",
+  "شبين الكوم",
+  "دمنهور",
+  "كفر الشيخ",
+  "دمياط",
+  "العريش",
+  "الطور",
+  "الغردقة",
+  "شرم الشيخ",
+  "مرسى مطروح",
+  "الإسماعيلية",
+  "بنها",
+];
+
+function CityField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
   return (
-    <button
-      {...rest}
-      disabled={loading || rest.disabled}
-      className="
-        flex-1 w-full h-14 rounded-full
-        bg-ink text-white font-lalezar text-lg
-        hover:bg-ink/90 active:scale-[0.99]
-        disabled:opacity-50 disabled:cursor-not-allowed
-        transition
-      "
-    >
-      {loading ? "..." : children}
-    </button>
+    <div className="w-full">
+      <label className="block w-full">
+        <span className="block mb-1.5 text-sm text-ink/60 font-lalezar">
+          المدينة
+        </span>
+
+        <input
+          type="text"
+          required
+          list="egypt-cities"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="اكتب اسم المدينة..."
+          autoComplete="address-level2"
+          className="
+            block w-full h-12 rounded-[10px] px-4
+            bg-white ring-1 ring-ink/10
+            font-lalezar text-base text-ink
+            focus:outline-none focus:ring-2 focus:ring-ink/30
+            transition
+          "
+          style={{ minWidth: "100%", maxWidth: "100%" }}
+        />
+        <datalist id="egypt-cities">
+          {EGYPTIAN_CITIES.map((city) => (
+            <option key={city} value={city} />
+          ))}
+        </datalist>
+      </label>
+
+      <div className="flex flex-wrap gap-2 mt-3">
+        {["القاهرة", "الجيزة", "الإسكندرية", "المنصورة"].map((city) => (
+          <button
+            key={city}
+            type="button"
+            onClick={() => onChange(city)}
+            className={cn(
+              "px-4 h-9 rounded-full",
+              "font-lalezar text-sm transition",
+              value === city
+                ? "bg-ink text-white"
+                : "bg-white ring-1 ring-ink/10 text-ink hover:bg-cream-50"
+            )}
+          >
+            {city}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
-function SecondaryButton({
-  children,
-  ...rest
-}: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+/* ============================================================
+   PhoneField
+   ============================================================ */
+function PhoneField({
+  label = "رقم الهاتف",
+  value,
+  onChange,
+  required = true,
+}: {
+  label?: string;
+  value: string;
+  onChange: (v: string) => void;
+  required?: boolean;
+}) {
+  const digits = value.replace(/\D/g, "").slice(0, 10);
+
+  const formatted = useMemo(() => {
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 2)} ${digits.slice(2)}`;
+    return `${digits.slice(0, 2)} ${digits.slice(2, 6)} ${digits.slice(6)}`;
+  }, [digits]);
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const raw = e.target.value.replace(/\D/g, "").slice(0, 10);
+    onChange(raw);
+  }
+
   return (
-    <button
-      {...rest}
-      type="button"
-      className="
-        h-14 px-6 rounded-full
-        bg-white text-ink font-lalezar text-lg
-        ring-1 ring-ink/10 hover:bg-white/80
-        transition
-      "
-    >
-      {children}
-    </button>
+    <div className="w-full">
+      <label className="block w-full">
+        <span className="block mb-1.5 text-sm text-ink/60 font-lalezar">
+          {label}
+        </span>
+
+        <div
+          className="
+            flex items-center gap-0
+            w-full h-12 rounded-[10px]
+            bg-white ring-1 ring-ink/10
+            focus-within:ring-2 focus-within:ring-ink/30
+            transition
+            overflow-hidden
+          "
+          dir="ltr"
+        >
+          <span
+            className="
+              flex items-center justify-center
+              h-full px-4
+              bg-cream-50
+              font-lalezar text-ink
+              border-r border-ink/10
+              shrink-0
+              select-none
+            "
+          >
+            🇪🇬 +20
+          </span>
+
+          <input
+            type="tel"
+            inputMode="numeric"
+            value={formatted}
+            onChange={handleChange}
+            placeholder="11 2222 3333"
+            required={required}
+            autoComplete="tel-national"
+            className="
+              flex-1 min-w-0 h-full px-4
+              bg-transparent
+              font-lalezar text-base text-ink
+              focus:outline-none
+              tracking-wider
+            "
+            style={{ minWidth: 0 }}
+          />
+        </div>
+
+        <span className="block mt-1.5 text-xs text-ink/45 font-lalezar">
+          أدخل الرقم بدون كود الدولة
+        </span>
+      </label>
+    </div>
   );
 }
