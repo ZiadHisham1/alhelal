@@ -41,6 +41,11 @@ const nextConfig: NextConfig = {
       port: "9000",
       pathname: "/**",
     },
+          {
+        protocol: "https",
+        hostname: "hiqdbyvqokypmwzgzaji.supabase.co",
+        pathname: "/storage/v1/object/public/**",
+    },
   ],
   // unoptimized: true, // 🔌 Disable Next.js image optimization for Medusa images
 },

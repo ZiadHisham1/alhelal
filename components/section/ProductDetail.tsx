@@ -321,6 +321,7 @@ function RelatedProductCard({ product }: { product: Product }) {
           fill
           sizes="(max-width: 640px) 70vw, (max-width: 1024px) 220px, 25vw"
           className="object-cover transition-transform duration-700 group-hover:scale-105"
+          unoptimized
         />
 
         {/* Sale badge */}
