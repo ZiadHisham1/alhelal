@@ -92,3 +92,18 @@ export async function completeOrder(cartId: string) {
   const result = await medusa.store.cart.complete(cartId);
   return result;
 }
+
+export async function saveReceiptMetadata(
+  cartId: string,
+  receipt: { url: string; fileId: string }
+) {
+  const { cart } = await medusa.store.cart.retrieve(cartId);
+  await medusa.store.cart.update(cartId, {
+    metadata: {
+      ...(cart.metadata ?? {}),
+      payment_receipt_url: receipt.url,
+      payment_receipt_file_id: receipt.fileId,
+    },
+  });
+  return true;
+}

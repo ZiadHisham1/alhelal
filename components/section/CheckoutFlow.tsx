@@ -23,9 +23,9 @@ interface AddressForm {
   first_name: string;
   last_name: string;
   phone: string;
-  address_1: string;      // street (auto-filled, editable)
-  address_2: string;      // building details (manual)
-  landmark: string;       // nearby landmark (chips + manual)
+  address_1: string;
+  address_2: string;
+  landmark: string;
   city: string;
   lat: number | null;
   lng: number | null;
@@ -46,9 +46,12 @@ export function CheckoutFlow() {
   const cartId = useCartStore((s) => s.cartId);
   const items = useCartStore((s) => s.items);
   const totalPrice = useCartStore((s) => s.totalPrice);
+
   type PaymentChoice = "cod" | "wallet" | null;
   const [paymentChoice, setPaymentChoice] = useState<PaymentChoice>(null);
-  const [receiptUrl, setReceiptUrl] = useState<string>("");
+
+  /* Receipt holds both url (for storage/display) and fileId (for admin) */
+  const [receiptFile, setReceiptFile] = useState<File | null>(null); 
 
   /* ---------- Form state ---------- */
   const [form, setForm] = useState<AddressForm>({
@@ -114,7 +117,7 @@ export function CheckoutFlow() {
         if (providers.length) {
           setPaymentProviders(providers);
           setSelectedProvider(providers[0].id);
-          setPaymentChoice("wallet");     // ← default
+          setPaymentChoice("wallet");
         }
       } catch (e: any) {
         console.error("[checkout] preload FAILED:", e?.message ?? e);
@@ -126,11 +129,13 @@ export function CheckoutFlow() {
  async function handleSubmit(e: React.FormEvent) {
   e.preventDefault();
   if (!cartId || !selectedShipping || !selectedProvider) return;
+
   if (!paymentChoice) {
     setError("من فضلك اختر طريقة الدفع");
     return;
   }
-  if (paymentChoice === "wallet" && !receiptUrl) {
+
+  if (paymentChoice === "wallet" && !receiptFile) {
     setError("من فضلك ارفع صورة الإيصال");
     return;
   }
@@ -139,6 +144,36 @@ export function CheckoutFlow() {
   setError(null);
 
   try {
+    /* 1. If wallet → upload the receipt now */
+    let receiptUrl = "";
+    let receiptFileId = "";
+
+    if (paymentChoice === "wallet" && receiptFile) {
+      const fd = new FormData();
+      fd.append("file", receiptFile);
+      fd.append("order_id", cartId);
+      fd.append("customer_name", `${form.first_name} ${form.last_name}`.trim() || "عميل");
+      fd.append("amount", String((total * 0.5).toFixed(0)));
+      fd.append("currency", "ج.م");
+      fd.append("phone", form.phone);
+      fd.append("city", form.city);
+      fd.append("address", form.address_1);
+
+      const upRes = await fetch("/api/upload-receipt", {
+        method: "POST",
+        body: fd,
+      });
+
+      const upData = await upRes.json();
+      if (!upRes.ok) {
+        throw new Error(upData.error ?? "فشل رفع الإيصال");
+      }
+
+      receiptUrl = upData.url;
+      receiptFileId = upData.file_id;
+    }
+
+    /* 2. Save shipping address + payment metadata */
     const fullAddress2 = [form.address_2, form.landmark]
       .filter(Boolean)
       .join(" | ");
@@ -160,7 +195,8 @@ export function CheckoutFlow() {
         ? {
             payment_method: "wallet",
             payment_status: "awaiting_review",
-            receipt_url: receiptUrl,
+            payment_receipt_url: receiptUrl,
+            payment_receipt_file_id: receiptFileId,
           }
         : {
             payment_method: "cod",
@@ -168,6 +204,7 @@ export function CheckoutFlow() {
           }
     );
 
+    /* 3. Finish order */
     await addShippingMethod(cartId, selectedShipping);
     await initPaymentSession(cartId, selectedProvider);
 
@@ -225,9 +262,7 @@ export function CheckoutFlow() {
             {/* ============ ADDRESS SECTION ============ */}
             <div className="space-y-4 pt-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-ink/60 font-lalezar">
-                  العنوان
-                </span>
+                <span className="text-sm text-ink/60 font-lalezar">العنوان</span>
                 {form.lat && (
                   <button
                     type="button"
@@ -239,7 +274,6 @@ export function CheckoutFlow() {
                 )}
               </div>
 
-              {/* Location picker */}
               <AddressPicker
                 onAddress={(data) => {
                   setForm((prev) => ({
@@ -252,7 +286,6 @@ export function CheckoutFlow() {
                 }}
               />
 
-              {/* Editable street — always visible */}
               <Field
                 label="اسم الشارع (يمكنك تعديله)"
                 required
@@ -262,7 +295,6 @@ export function CheckoutFlow() {
                 autoComplete="address-line1"
               />
 
-              {/* Building details */}
               <Field
                 label="تفاصيل المبنى"
                 value={form.address_2}
@@ -271,19 +303,16 @@ export function CheckoutFlow() {
                 autoComplete="address-line2"
               />
 
-              {/* Landmark chips + free text */}
               <LandmarkPicker
                 value={form.landmark}
                 onChange={(v) => setForm({ ...form, landmark: v })}
               />
 
-              {/* City */}
               <CityField
                 value={form.city}
                 onChange={(v) => setForm({ ...form, city: v })}
               />
 
-              {/* Map preview */}
               {showMap && form.lat && form.lng && (
                 <div className="space-y-2">
                   <div className="w-full aspect-[16/9] rounded-[10px] overflow-hidden ring-1 ring-ink/10">
@@ -415,12 +444,13 @@ export function CheckoutFlow() {
             </button>
 
             {/* Wallet panel — visible when selected */}
-            {paymentChoice === "wallet" && cartId && (
+              {paymentChoice === "wallet" && cartId && (
               <div className="pt-2">
                 <WalletPaymentPanel
                   cartId={cartId}
                   total={total}
-                  onReceiptUploaded={setReceiptUrl}
+                  selectedFile={receiptFile}
+                  onFileSelected={setReceiptFile}
                 />
               </div>
             )}
@@ -438,13 +468,13 @@ export function CheckoutFlow() {
             <button
               type="submit"
               disabled={
-              loading ||
-              !selectedShipping ||
-              !selectedProvider ||
-              items.length === 0 ||
-              !paymentChoice ||
-              (paymentChoice === "wallet" && !receiptUrl)
-            }
+                loading ||
+                !selectedShipping ||
+                !selectedProvider ||
+                items.length === 0 ||
+                !paymentChoice ||
+                (paymentChoice === "wallet" && !receiptFile)
+              }
               className="
                 w-full h-14 rounded-full
                 bg-ink text-white font-lalezar text-lg
@@ -643,7 +673,7 @@ function Field({
 }
 
 /* ============================================================
-   LandmarkPicker — quick chips + free text
+   LandmarkPicker
    ============================================================ */
 const LANDMARKS = [
   "مسجد",

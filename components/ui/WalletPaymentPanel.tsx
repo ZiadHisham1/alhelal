@@ -4,50 +4,30 @@ import { useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface WalletPaymentPanelProps {
-  cartId: string;
   total: number;
-  onReceiptUploaded: (url: string) => void;
+  selectedFile: File | null;
+  onFileSelected: (file: File | null) => void;
 }
 
 export function WalletPaymentPanel({
-  cartId,
   total,
-  onReceiptUploaded,
+  selectedFile,
+  onFileSelected,
 }: WalletPaymentPanelProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
-  const [receiptUrl, setReceiptUrl] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  async function handleFile(file: File) {
-    setUploading(true);
-    setError(null);
+  function handleFile(file: File) {
+    if (!file.type.startsWith("image/")) return;
+    if (file.size > 5 * 1024 * 1024) return;
 
-    try {
-      const fd = new FormData();
-      fd.append("file", file);
-      fd.append("cartId", cartId);
-
-      const res = await fetch("/api/upload-receipt", {
-        method: "POST",
-        body: fd,
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "فشل الرفع");
-
-      setReceiptUrl(data.url);
-      onReceiptUploaded(data.url);
-    } catch (e: any) {
-      setError(e?.message ?? "فشل رفع الصورة");
-    } finally {
-      setUploading(false);
-    }
+    onFileSelected(file);
+    setPreviewUrl(URL.createObjectURL(file));
   }
 
-  async function handleRemove() {
-    setReceiptUrl(null);
-    onReceiptUploaded("");
+  function handleRemove() {
+    onFileSelected(null);
+    setPreviewUrl(null);
     if (inputRef.current) inputRef.current.value = "";
   }
 
@@ -62,18 +42,15 @@ export function WalletPaymentPanel({
         </p>
       </div>
 
-      {/* Amount */}
       <div className="rounded-xl bg-white ring-1 ring-ink/10 p-4 text-center">
-        <p className="text-xs text-ink/50 font-lalezar"> المبلغ المطلوب 
-        <span className="mx-1 ">
-            (50% deposite) 
-        </span></p>
+        <p className="text-xs text-ink/50 font-lalezar">
+          المبلغ المطلوب <span className="mx-1">(50% deposite)</span>
+        </p>
         <p className="font-lalezar text-3xl text-ink mt-1">
-          {(total * 0.5 ).toLocaleString("ar-EG")} ج.م
+          {(total * 0.5).toLocaleString("ar-EG")} ج.م
         </p>
       </div>
 
-      {/* Channels */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <ChannelCard
           name="فودافون كاش"
@@ -91,14 +68,15 @@ export function WalletPaymentPanel({
 
       <ol className="text-sm text-ink/70 font-lalezar space-y-1.5 pr-5 list-decimal text-right">
         <li>افتح تطبيق المحفظة أو فوري</li>
-        <li>حوّل مبلغ {(total * 0.5).toLocaleString("ar-EG")} ج.م على الرقم أعلاه</li>
+        <li>
+          حوّل مبلغ {(total * 0.5).toLocaleString("ar-EG")} ج.م على الرقم أعلاه
+        </li>
         <li>خُذ Screenshot من إيصال التحويل</li>
         <li>ارفع الصورة هنا</li>
       </ol>
 
-      {/* Upload */}
       <div className="space-y-3">
-        {!receiptUrl && (
+        {!previewUrl && (
           <div>
             <input
               ref={inputRef}
@@ -108,7 +86,6 @@ export function WalletPaymentPanel({
                 const f = e.target.files?.[0];
                 if (f) handleFile(f);
               }}
-              disabled={uploading}
               className="sr-only"
               id="receipt-upload"
             />
@@ -119,50 +96,38 @@ export function WalletPaymentPanel({
                 "w-full h-32 rounded-2xl",
                 "border-2 border-dashed border-ink/20",
                 "bg-white hover:bg-cream-50 hover:border-ink/40",
-                "cursor-pointer transition",
-                uploading && "opacity-50 pointer-events-none"
+                "cursor-pointer transition"
               )}
             >
-              {uploading ? (
-                <>
-                  <span className="animate-spin inline-block w-8 h-8 border-[3px] border-ink/20 border-t-ink rounded-full mb-2" />
-                  <span className="text-sm text-ink/60 font-lalezar">
-                    جاري رفع الصورة...
-                  </span>
-                </>
-              ) : (
-                <>
-                  <svg
-                    className="w-10 h-10 text-ink/40 mb-2"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={1.8}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <rect x="3" y="3" width="18" height="18" rx="2" />
-                    <circle cx="8.5" cy="8.5" r="1.5" />
-                    <path d="M21 15l-5-5L5 21" />
-                  </svg>
-                  <span className="font-lalezar text-base text-ink">
-                    اضغط لرفع صورة الإيصال
-                  </span>
-                  <span className="text-xs text-ink/50 font-lalezar mt-1">
-                    PNG أو JPG، الحد الأقصى 5 ميجا
-                  </span>
-                </>
-              )}
+              <svg
+                className="w-10 h-10 text-ink/40 mb-2"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.8}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <path d="M21 15l-5-5L5 21" />
+              </svg>
+              <span className="font-lalezar text-base text-ink">
+                اضغط لرفع صورة الإيصال
+              </span>
+              <span className="text-xs text-ink/50 font-lalezar mt-1">
+                PNG أو JPG، الحد الأقصى 5 ميجا
+              </span>
             </label>
           </div>
         )}
 
-        {receiptUrl && (
+        {previewUrl && (
           <div className="space-y-2">
             <div className="relative w-full aspect-[3/4] sm:aspect-[4/3] rounded-2xl overflow-hidden ring-1 ring-ink/10 bg-white">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={receiptUrl}
+                src={previewUrl}
                 alt="إيصال التحويل"
                 className="w-full h-full object-contain"
               />
@@ -183,7 +148,7 @@ export function WalletPaymentPanel({
                     strokeLinejoin="round"
                   />
                 </svg>
-                تم رفع الصورة بنجاح
+                تم اختيار الصورة
               </p>
 
               <button
@@ -195,12 +160,6 @@ export function WalletPaymentPanel({
               </button>
             </div>
           </div>
-        )}
-
-        {error && (
-          <p className="text-sm text-rose-600 font-lalezar text-center">
-            {error}
-          </p>
         )}
       </div>
     </div>
