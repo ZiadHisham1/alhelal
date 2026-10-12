@@ -2,8 +2,10 @@ import { Sheet } from "@/components/section/Sheet";
 import { CollectionClient } from "@/components/section/CollectionClient";
 import { fetchProducts } from "@/lib/product-server";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { unstable_noStore as noStore } from "next/cache"
 
 export default async function CollectionPage() {
+  noStore();
   const products = await fetchProducts();
 
   return (
