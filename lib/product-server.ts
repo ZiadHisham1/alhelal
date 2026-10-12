@@ -15,10 +15,6 @@ function toAbsoluteUrl(url: string | null | undefined): string {
 }
 
 export async function fetchProducts(): Promise<Product[]> {
-  "use cache";
-  cacheLife("hours");
-  cacheTag("products");
-
   const region = await getDefaultRegion();
 
   const { products } = await medusa.store.product.list({

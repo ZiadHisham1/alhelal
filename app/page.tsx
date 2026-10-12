@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Hero } from "@/components/section/Hero";
 import { CategoryPrompt } from "@/components/section/CategoryPrompt";
@@ -9,14 +10,32 @@ import { fetchProducts } from "@/lib/product-server";
 import FaqSection from "@/components/section/FaqSection";
 import { faqs } from "@/data/faq";
 
-export default async function HomePage() {
- const products = await fetchProducts();
+/**
+ * The dynamic part — fetches products on every request.
+ * Wrapped in <Suspense> below so the rest of the page renders instantly.
+ */
+async function SearchSheet() {
+  const products = await fetchProducts();
 
+  return (
+    <SearchSection
+      products={products}
+      title="اعمل سيرش علي اي منتج او اعمله عمولة"
+      ctaLabel="ابحث عن المزيد"
+    />
+  );
+}
+
+/**
+ * Static shell. Renders immediately on the CDN;
+ * the products stream in via <Suspense>.
+ */
+export default function HomePage() {
   return (
     <main className="relative bg-cream-100">
       {/* Fixed navbar above everything */}
       {/* <Navbar /> */}
- 
+
       {/* Layer 0 — sticky hero */}
       <Hero
         image="/img/hero-sofa.jpg"
@@ -32,12 +51,16 @@ export default async function HomePage() {
 
       <OffersSection />
 
-      {/* Layer 20 — search sheet rises over category */}
-      <SearchSection
-        products={products}
-        title="اعمل سيرش علي اي منتج او اعمله عمولة"
-        ctaLabel="ابحث عن المزيد"
-      />
+      {/* Layer 20 — search sheet, fresh products every visit */}
+      <Suspense
+        fallback={
+          <div className="py-12 text-center text-ink/50 font-lalezar">
+            جاري تحميل المنتجات...
+          </div>
+        }
+      >
+        <SearchSheet />
+      </Suspense>
 
       <FaqSection faqs={faqs} />
 
