@@ -204,7 +204,7 @@ export function ProductDetail({ product, related }: ProductDetailProps) {
                 />
 
                 {/* Buy it now */}
-                <button
+                {/* <button
                   type="button"
                   onClick={() => {
                     if (!product.variantId) return;
@@ -221,7 +221,7 @@ export function ProductDetail({ product, related }: ProductDetailProps) {
                   "
                 >
                   {isOutOfStock ? "غير متوفر" : "اشترِ الآن"}
-                </button>
+                </button> */}
               </div>
 
               {/* ---------- Specs ---------- */}
