@@ -447,7 +447,6 @@ export function CheckoutFlow() {
               {paymentChoice === "wallet" && cartId && (
               <div className="pt-2">
                 <WalletPaymentPanel
-                  cartId={cartId}
                   total={total}
                   selectedFile={receiptFile}
                   onFileSelected={setReceiptFile}
