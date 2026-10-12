@@ -23,7 +23,7 @@ export default function CartPage() {
   return (
     <main className="relative bg-cream-100 min-h-screen">
       <Sheet layer={10}>
-        <div className="max-w-[720px] mx-auto space-y-6">
+        <div className="max-w-[720px] mx-auto pt-20 space-y-6">
           <div className="flex items-center justify-between">
             <h1 className="font-lalezar text-2xl sm:text-3xl text-ink">
               سلة التسوق

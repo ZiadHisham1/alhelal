@@ -6,7 +6,7 @@ export default function CheckoutPage() {
   return (
     <main className="relative bg-cream-100 min-h-screen">
       <Sheet layer={10}>
-        <div className="max-w-[560px] lg:max-w-[1200px] mx-auto space-y-8">
+        <div className="max-w-[560px] lg:max-w-[1200px] pt-20 mx-auto space-y-8">
           <h1 className="font-lalezar text-3xl lg:text-4xl text-ink text-center">
             إتمام الشراء
           </h1>

@@ -34,7 +34,7 @@ export function ProductDetail({ product, related }: ProductDetailProps) {
   return (
     <>
       <Sheet layer={10}>
-        <div className="max-w-[720px] lg:max-w-[1200px] mx-auto">
+        <div className="max-w-[720px] pt-20 lg:max-w-[1200px] mx-auto">
           {/* Breadcrumb */}
           <nav
             aria-label="مسار التنقل"
