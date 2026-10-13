@@ -3,6 +3,7 @@
 import { useCartStore } from "@/lib/cart-store";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { siteConfig } from "@/config/site";
 import { IconButton } from "@/components/ui/IconButton";
@@ -36,12 +37,14 @@ export function Navbar() {
               "relative h-[52px] lg:h-[60px]",
               "rounded-2xl lg:rounded-glass",
               "px-3 sm:px-4 lg:px-6",
-              "flex items-center justify-between lg:justify-start gap-2 lg:gap-6",
+              "flex items-center justify-between gap-2 lg:gap-6",
               "overflow-hidden",
               "border border-white/30",
               "backdrop-blur-sm backdrop-saturate-150 backdrop-brightness-110",
               "transition-all duration-300",
-              scrolled ? "shadow-[0_12px_32px_rgba(0,0,0,0.22)]" : "shadow-glass"
+              scrolled
+                ? "shadow-[0_12px_32px_rgba(0,0,0,0.22)]"
+                : "shadow-glass"
             )}
             style={{
               background:
@@ -69,48 +72,34 @@ export function Navbar() {
 
             {/* =====================================================
                 RTL LAYOUT
-                Visual:        [icons] ......... [links] ......... [brand] [menu]
-                DOM order (RTL reverses):  icons → links → brand+menu
-                In RTL, the FIRST DOM element appears on the RIGHT.
+                Mobile:  [menu] ........ [LOGO] ........ [cart]
+                Desktop: [cart] [links] ... [LOGO]  (logo on visual right)
             ===================================================== */}
 
-            {/* RIGHT (visually) — brand + hamburger */}
-            <div className="relative z-[2] flex items-center gap-2 lg:gap-3 shrink-0">
-              {/* Hamburger — mobile only */}
-              <IconButton
-                icon="menu"
-                label={siteConfig.nav.menu.label}
-                onClick={() => setMobileOpen((v) => !v)}
-                className="lg:hidden"
+            {/* LOGO — first in DOM, so in RTL it sits visually right on desktop */}
+            <Link
+              href="/"
+              aria-label={siteConfig.name}
+              className={cn(
+                "relative z-[3] flex items-center justify-center",
+                "pointer-events-auto select-none shrink-0",
+                // Mobile: absolutely centered
+                "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
+                // Desktop: normal flow, right side
+                "lg:static lg:translate-x-0 lg:translate-y-0 lg:left-auto lg:top-auto"
+              )}
+            >
+              <Image
+                src="/icons/logo.svg"
+                alt={siteConfig.name}
+                width={120}
+                height={36}
+                priority
+                className="h-12 lg:h-12 w-auto object-contain"
               />
+            </Link>
 
-              {/* Brand */}
-              <Link
-                href="/"
-                aria-label={siteConfig.name}
-                className="
-                  relative flex items-center gap-1.5
-                  font-lalezar text-[16px] lg:text-[18px]
-                  leading-[25px]
-                  select-none shrink-0
-                "
-              >
-                <span
-                  className="text-ink"
-                  style={{ textShadow: "0 1px 0 rgba(255,255,255,0.3)" }}
-                >
-                  {siteConfig.brand.primary}
-                </span>
-                <span
-                  className="text-[#FFDEDE]"
-                  style={{ textShadow: "0 1px 2px rgba(0,0,0,0.2)" }}
-                >
-                  {siteConfig.brand.secondary}
-                </span>
-              </Link>
-            </div>
-
-            {/* CENTER — desktop nav links */}
+            {/* DESKTOP: nav links (centered, fill the middle) */}
             <ul className="hidden lg:flex flex-1 items-center justify-center gap-1">
               {siteConfig.nav.links?.map((link) => {
                 const isActive =
@@ -136,8 +125,8 @@ export function Navbar() {
               })}
             </ul>
 
-            {/* LEFT (visually) — cart + profile */}
-            <div className="relative z-[2] flex items-center gap-0.5 lg:gap-1 shrink-0 lg:flex-1 lg:justify-end">
+            {/* Cart — visual left on desktop */}
+            <div className="relative z-[2] flex items-center gap-0.5 lg:gap-1 shrink-0">
               <div className="relative">
                 <IconButton
                   icon="cart"
@@ -146,11 +135,15 @@ export function Navbar() {
                 />
                 <CartBadge />
               </div>
-              {/* <IconButton
-                icon="profile"
-                label={siteConfig.nav.profile.label}
-                href={siteConfig.nav.profile.href}
-              /> */}
+            </div>
+
+            {/* Hamburger — mobile only (hidden on desktop) */}
+            <div className="relative z-[2] flex items-center gap-2 shrink-0 lg:hidden">
+              <IconButton
+                icon="menu"
+                label={siteConfig.nav.menu.label}
+                onClick={() => setMobileOpen((v) => !v)}
+              />
             </div>
           </nav>
         </div>
@@ -162,9 +155,7 @@ export function Navbar() {
   );
 }
 
-/* ============================================================
-   Mobile drawer
-   ============================================================ */
+/* Mobile drawer — unchanged */
 function MobileDrawer({
   open,
   onClose,
@@ -193,7 +184,6 @@ function MobileDrawer({
         )}
         aria-hidden
       />
-
       <aside
         role="dialog"
         aria-modal="true"
@@ -206,9 +196,13 @@ function MobileDrawer({
         )}
       >
         <div className="flex items-center justify-between p-5 border-b border-black/5">
-          <span className="font-lalezar text-xl text-ink">
-            {siteConfig.name}
-          </span>
+          <Image
+            src="/icons/logo.svg"
+            alt={siteConfig.name}
+            width={100}
+            height={30}
+            className="h-10 w-auto object-contain"
+          />
           <button
             type="button"
             onClick={onClose}
@@ -218,7 +212,6 @@ function MobileDrawer({
             ×
           </button>
         </div>
-
         <ul className="flex-1 p-3 space-y-1 overflow-y-auto">
           {items.map((item) => {
             const isActive = pathname === item.href;
@@ -230,9 +223,7 @@ function MobileDrawer({
                   className={cn(
                     "block px-4 py-3 rounded-xl",
                     "font-lalezar text-lg transition-colors",
-                    isActive
-                      ? "bg-ink text-white"
-                      : "text-ink hover:bg-white"
+                    isActive ? "bg-ink text-white" : "text-ink hover:bg-white"
                   )}
                 >
                   {item.label}
@@ -241,7 +232,6 @@ function MobileDrawer({
             );
           })}
         </ul>
-
         <div className="p-5 border-t border-black/5">
           <p className="text-xs text-ink/50 text-center font-lalezar">
             © 2026 {siteConfig.name}
@@ -250,4 +240,4 @@ function MobileDrawer({
       </aside>
     </>
   );
-} 
+}

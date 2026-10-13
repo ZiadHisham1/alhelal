@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Alhelal Furniture icon</title>
+  <desc id="desc">A premium brown and gold house outline containing a sofa and floor lamp, with a curved underline.</desc>
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6b3510"/>
+      <stop offset=".32" stop-color="#c47a27"/>
+      <stop offset=".62" stop-color="#ffcf73"/>
+      <stop offset=".82" stop-color="#a95e18"/>
+      <stop offset="1" stop-color="#f5c56a"/>
+    </linearGradient>
+    <linearGradient id="brown" x1="0" y1="0" x2="0.85" y2="1">
+      <stop offset="0" stop-color="#7a431c"/>
+      <stop offset=".48" stop-color="#4b260d"/>
+      <stop offset="1" stop-color="#2f1809"/>
+    </linearGradient>
+    <linearGradient id="cushion" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#a96b31"/>
+      <stop offset="1" stop-color="#583016"/>
+    </linearGradient>
+  </defs>
+  <!-- roof / home silhouette -->
+  <path d="M70 224 V174 Q70 157 86 148 L235 65 Q253 55 271 65 L432 154"
+        fill="none" stroke="url(#gold)" stroke-width="25" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M88 219 V177 Q88 167 98 161 L239 83 Q253 75 267 83 L403 158"
+        fill="none" stroke="#ffe0a0" stroke-opacity=".65" stroke-width="3.5" stroke-linecap="round"/>
+  <!-- sofa back -->
+  <path d="M105 252 Q105 231 126 231 H318 Q338 231 338 253 V312 H105Z" fill="url(#brown)"/>
+  <path d="M113 252 Q113 239 128 239 H205 Q222 239 222 255 V296 H113Z" fill="#6a3a18"/>
+  <path d="M226 255 Q226 239 242 239 H315 Q330 239 330 254 V296 H226Z" fill="#603215"/>
+  <!-- arms -->
+  <path d="M92 274 Q78 273 78 290 V351 Q78 363 91 363 H112 V302 Q112 280 92 274Z" fill="url(#brown)"/>
+  <path d="M338 274 Q358 273 358 293 V351 Q358 363 345 363 H326 V302 Q326 280 338 274Z" fill="url(#brown)"/>
+  <!-- seat cushions -->
+  <path d="M115 303 Q115 294 128 294 H214 Q227 294 227 307 V332 H115Z" fill="url(#cushion)"/>
+  <path d="M231 307 Q231 294 244 294 H317 Q326 294 326 304 V332 H231Z" fill="url(#cushion)"/>
+  <!-- seat front / feet -->
+  <path d="M115 335 Q220 344 326 335 V347 Q220 357 115 347Z" fill="#3b1d0b"/>
+  <path d="M127 348 V359 M313 348 V359" stroke="#3b1d0b" stroke-width="8" stroke-linecap="round"/>
+  <!-- accent pillow -->
+  <path d="M265 250 Q268 243 277 244 L305 248 Q312 250 309 258 L299 283 Q297 289 289 286 L265 278 Q259 276 262 267Z" fill="url(#gold)" stroke="#f7d28a" stroke-width="2"/>
+  <!-- floor lamp -->
+  <path d="M370 223 L386 177 Q389 169 398 169 H431 Q440 169 443 177 L459 223 Q461 230 452 230 H377 Q367 230 370 223Z" fill="url(#brown)" stroke="url(#gold)" stroke-width="3"/>
+  <path d="M414 231 V348" stroke="url(#gold)" stroke-width="10" stroke-linecap="round"/>
+  <path d="M401 244 Q414 252 427 244" fill="none" stroke="#8e5424" stroke-width="7" stroke-linecap="round"/>
+  <path d="M393 354 Q414 341 435 354 L451 363 Q455 367 448 369 H380 Q373 367 378 363Z" fill="url(#brown)" stroke="url(#gold)" stroke-width="2"/>
+  <!-- sweeping baseline -->
+  <path d="M34 416 Q248 348 475 416 Q255 386 34 416Z" fill="url(#gold)"/>
+  <path d="M54 411 Q249 365 454 411" fill="none" stroke="#f8d18b" stroke-width="2.5" stroke-linecap="round" opacity=".9"/>
+</svg>
