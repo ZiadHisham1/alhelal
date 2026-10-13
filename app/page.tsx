@@ -38,10 +38,11 @@ export default function HomePage() {
 
       {/* Layer 0 — sticky hero */}
       <Hero
-        image="/img/hero-sofa.jpg"
-        alt="أثاث البيت"
-        title="اثاث البيت"
-        subtitle="اساس البيت"
+          video="/videos/hero.mp4"
+          image="/img/hero_frame_one.jpg"    // poster + fallback
+          alt="أثاث البيت"
+          title="اثاث البيت"
+          subtitle="اساس البيت"
       />
 
       {/* Layer 10 — category sheet rises over hero */}

@@ -1,47 +1,99 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 interface HeroProps {
+  /** Background video URL (mp4/webm). Optional — falls back to image. */
+  video?: string;
+  /** Poster image (shown before video loads, and as fallback) */
   image: string;
   alt: string;
   title: string;
   subtitle?: string;
+
   /** Optional CTA buttons */
   ctaPrimary?: { label: string; href: string };
   ctaSecondary?: { label: string; href: string };
+
   /** Responsive height — mobile → desktop */
   heightClass?: string;
   className?: string;
 }
 
-export function Hero({
-  image,
-  alt,
-  title,
-  subtitle,
-  ctaPrimary,
-  ctaSecondary,
-  heightClass = "h-[45vh] sm:h-[30vh] lg:h-[80vh]",
-  className,
-}: HeroProps) {
+export function Hero({ video, image, alt, title, subtitle, ctaPrimary, ctaSecondary, heightClass = "h-[45vh] sm:h-[30vh] lg:h-[80vh]", className }: HeroProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [videoEnded, setVideoEnded] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setPrefersReducedMotion(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v || !video || prefersReducedMotion) return;
+    v.muted = true;
+    v.defaultMuted = true;
+    v.play().catch(() => {});
+  }, [video, prefersReducedMotion]);
+
+  const showVideo = Boolean(video) && !prefersReducedMotion;
+
   return (
-    <section
-      className={cn(
-        "sticky top-0 z-0 w-full",
-        heightClass,
-        className
-      )}
-    >
-      {/* Background image */}
-      <div className="relative w-full h-full">
+    <section className={cn("sticky top-0 z-0 w-full", heightClass, className)}>
+      <div className="relative w-full h-full overflow-hidden bg-ink">
+        {/* Poster image — fades in when video ends */}
         <Image
           src={image}
           alt={alt}
           fill
           priority
           sizes="100vw"
-          className="object-cover"
+          className={cn(
+            "object-cover transition-opacity duration-700",
+            videoEnded ? "opacity-100" : "opacity-0"
+          )}
         />
+
+        <div className="relative w-full h-full overflow-hidden bg-ink">
+
+  {/* 1. Video — plays, then gets covered */}
+  {showVideo && (
+    <video
+      ref={videoRef}
+      className="absolute inset-0 w-full h-full object-cover"
+      src={video}
+      autoPlay
+      muted
+      playsInline
+      preload="auto"
+      aria-hidden="true"
+      onEnded={() => setVideoEnded(true)}
+    />
+  )}
+
+  {/* 2. Poster image — fades in on top */}
+  <Image
+    src={image}
+    alt={alt}
+    fill
+    priority
+    sizes="100vw"
+    className="object-cover"
+    style={{
+      opacity: videoEnded ? 1 : 0,
+      transition: "opacity 500ms ease-out",
+      // 👇 Guarantee stacking order: poster above video
+      zIndex: 2,
+    }}
+  />
+</div>
       </div>
 
       {/* Legibility gradient — stronger at bottom */}
@@ -133,16 +185,6 @@ export function Hero({
           )}
         </div>
       </div>
-
-      {/* Subtle scroll hint at the very bottom (mobile only) */}
-      {/* <div
-        aria-hidden
-        className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 sm:hidden"
-      >
-        <div className="w-1 h-6 rounded-full bg-white/40 relative overflow-hidden">
-          <div className="absolute inset-0 bg-white/80 rounded-full animate-[scrollHint_1.8s_ease-in-out_infinite]" />
-        </div>
-      </div> */}
     </section>
   );
 }
