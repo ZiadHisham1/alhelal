@@ -72,6 +72,7 @@ export function Hero({ video, image, alt, title, subtitle, ctaPrimary, ctaSecond
       autoPlay
       muted
       playsInline
+      loop
       preload="auto"
       aria-hidden="true"
       onEnded={() => setVideoEnded(true)}
