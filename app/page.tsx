@@ -39,7 +39,7 @@ export default function HomePage() {
       {/* Layer 0 — sticky hero */}
       <Hero
           video="/videos/hero.mp4"
-          image=""    // poster + fallback
+          image="/img/hero-sofa.jpg"    // poster + fallback
           alt="أثاث البيت"
           title="اثاث البيت"
           subtitle="اساس البيت"
